@@ -43,8 +43,8 @@ def get_link_map(lang1, lang2, path):
     link_map = {}
     # TODO remember reversing
     # os.path.splitext(path)[0] + '.link'
-    link_path = glob.glob(os.path.join(language_pair_to_path[lang1 + "_" + lang2],path.split(".xml")[0] + "*"))
-    print("get_link_path: ", link_path[0])
+    link_path = glob.glob(os.path.join(language_pair_to_path[lang1 + "_" + lang2],path.split(".xml")[0] + ".lnk"))
+    print("get_link_path: ", link_path)
     # os.rename(os.path.join(language_pair_to_path[lang1 + "_" + lang2], os.path.dirname(path) + os.path.splitext(path)[0] + '.lnk') ,
     #           os.path.join(language_pair_to_path[lang1 + "_" + lang2], os.path.dirname(path) + os.path.splitext(path)[0] + '.xml'))
 ###    path_to_link_file = os.path.join(language_pair_to_path[lang1 + "_" + lang2], path)
@@ -83,9 +83,9 @@ def build_parallel_corpus(lang1, lang2, output_folder):
                     if second_language_file is not None: # in case the desired file doesn't exist in the 2nd language path
                         print("not skipping:", os.path.join(root, file) , "----", lang2+"\\"+file_relative_path)
                         second_id_to_text = get_id_to_text(second_language_file)
-                        sentence_root = ET.parse(os.path.join(root, file)).getroot()
+                        second_root = ET.parse(os.path.join(root, file)).getroot()
                         links = get_link_map(lang1, lang2, file_relative_path)
-                        for sentence in sentence_root.iter('s'):
+                        for sentence in second_root.iter('s'):
                             id = sentence.attrib['id']
                             if id in links.keys():
                                 aligned_id = links[id]
