@@ -29,7 +29,7 @@ lang_to_path = {x: os.path.join(root_path, x) for x in languages}
 links = ["es_en", "ar_en", "fr_en", "ru_en", "zh_en"]
 
 # A dictionary of each language pair to the link directory
-language_pair_to_path = {x: os.path.join(root_path, "links", x) for x in links}  # !!!!!!! remove  links !!!! before running !
+language_pair_to_path = {x: os.path.join(root_path, "links", x) for x in links}
 
 
 languages_dict = {'fr' : [(['anglais'],'en'),
@@ -60,15 +60,19 @@ class CorpusStatistics:
         self.number_protocols_not_extracted_origin_both = 0
         self.number_protocols_not_extracted_origin_only_first = 0
         self.number_protocols_not_extracted_origin_only_second = 0
-        # ===========
+        self.number_protocols_extracted_origin_conflicted = 0
+        # =========== unimportant shit ===========
         self.number_protocols_not_contain_original_tag = [0]*2
         self.number_protocols_origin_is0 = [0]*2
         self.number_protocols_origin_is1 = [0]*2
         self.number_protocols_origin_is2 = [0]*2
         self.number_protocols_origin_is_more = [0]*2
+        # ========================================
 
         #Origin language matching
         self.number_protocols_origin_lang_not_any_of_two = 0
+        self.number_of_protocols_not_obtainable_link_file = 0
+        # valid protocols
         self.number_of_protocols_originally_first_lang = 0
         self.number_of_protocols_originally_second_lang = 0
 
@@ -120,6 +124,10 @@ class CorpusStatistics:
         print(">>> {0} origin language only from second file could not be extracted. rate:{1}".format(
             self.number_protocols_not_extracted_origin_only_second,
             str(self.number_protocols_not_extracted_origin_only_second / self.total_number_of_protocols)))
+        print(">>> {0} protocols were filtered due to conflict between the extracted origin. rate: {1}".format(
+            self.number_protocols_extracted_origin_conflicted,
+            str(self.number_protocols_extracted_origin_conflicted/self.total_number_of_protocols)))
+
 
         print("--->{0} protocols not contain original tag from first language folder. rate: {1}".format(
             self.number_protocols_not_contain_original_tag[0],
@@ -152,14 +160,17 @@ class CorpusStatistics:
             self.number_protocols_origin_is1[1],
             str(self.number_protocols_origin_is1[1] / self.total_number_of_protocols)))
 
-        print("{0} protocols origin language was successfuly extracted, but did not match any of the two languages. rate{1}".format(
+        print("{0} protocols origin language was successfully extracted, but did not match any of the two languages. rate {1}".format(
             self.number_protocols_origin_lang_not_any_of_two,
             str(self.number_protocols_origin_lang_not_any_of_two / self.total_number_of_protocols)))
+        print("{0} protocols origin language was matching one of the two, however link file could not be obtained. rate {1}". format(
+            self.number_of_protocols_not_obtainable_link_file,
+            str(self.number_of_protocols_not_obtainable_link_file/self.total_number_of_protocols)))
         print("**** Valid Protocols ****")
-        print("{0} protocols origin language was successfuly extracted, and matched the first language. rate{1}".format(
+        print("{0} protocols origin language was successfully extracted, and matched the first language. rate: {1}".format(
             self.number_of_protocols_originally_first_lang,
             str(self.number_of_protocols_originally_first_lang / self.total_number_of_protocols)))
-        print("{0} protocols origin language was successfuly extracted, and matched the second language. rate{1}".format(
+        print("{0} protocols origin language was successfully extracted, and matched the second language. rate: {1}".format(
             self.number_of_protocols_originally_second_lang,
             str(self.number_of_protocols_originally_second_lang / self.total_number_of_protocols)))
         print("=================================SENTENCES=================================")
@@ -184,10 +195,10 @@ class CorpusStatistics:
         print("**** Valid Sentences ****")
         print("{0} sentences are originally in the first language. rate {1} out of the valid sentences".format(
             self.number_of_sentences_in_originally_first_lang,
-            str(self.number_of_sentences_in_originally_first_lang / self.number_of_valid_sentences)))
+            str(self.number_of_sentences_in_originally_first_lang / self.total_number_of_sentences)))
         print("{0} sentences are originally in second language. rate {1} out of the valid sentences ".format(
             self.number_of_sentences_in_originally_second_lang,
-            str(self.number_of_sentences_in_originally_second_lang / self.number_of_valid_sentences)))
+            str(self.number_of_sentences_in_originally_second_lang / self.total_number_of_sentences)))
 
 
 
@@ -233,30 +244,46 @@ def find_original_language_in_one_file(xmlRoot, lang, path, idx, statistics):
 def get_origin_language(xmlRoot1, lang1, xmlRoot2, lang2, path1, path2, statistics):
     comp1 = find_original_language_in_one_file(xmlRoot1, lang1, path1, 0, statistics)
     comp2 = find_original_language_in_one_file(xmlRoot2, lang2, path2, 1, statistics)
+    #print("COMPARING ORIGINAL LAHGUANEG FROM TWO FILES: ", comp1, comp2)
     if comp1 is None and comp2 is None:
         statistics.number_protocols_not_extracted_origin_both += 1
     elif comp1 is None and comp2 is not None:
         statistics.number_protocols_not_extracted_origin_only_first += 1
     elif comp1 is not None and comp2 is None:
         statistics.number_protocols_not_extracted_origin_only_second += 1
-    #print("COMPARING ORIGINAL LAHGUANEG FROM TWO FILES: ", comp1, comp2)
+    elif (comp1 is not None and comp2 is not None and comp1[1] != comp2[1]):
+        statistics.number_protocols_extracted_origin_conflicted += 1
+        #print(comp1, comp2, '^^^^', path1, path2)
     elif (comp1 is not None and comp2 is not None and comp1[1] == comp2[1]):
         return comp1[1]
     return None
 
 def get_link_map(lang1, lang2, path):
     link_map = {}
-    # TODO remember reversing
-    lnk_folder = [val for val in links if lang1 in val and lang2 in val]
-    link_path = glob.glob(os.path.join(language_pair_to_path[lnk_folder.pop()], path.split(".xml")[0] + ".lnk"))     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    links_file = open(link_path.pop(), 'r')
-    links_root = ET.parse(links_file).getroot()
-    for link in links_root.iter('link'):
-        if link.attrib['type'] == '1-1':
-            link_string = link.attrib['xtargets'].split(';')
-            link_map[link_string[0]] = link_string[1]
-    links_file.close()
-    return link_map
+    lnk_folder = [val for val in links if lang1 in val and lang2 in val].pop()
+    link_path = glob.glob(os.path.join(language_pair_to_path[lnk_folder], path.split(".xml")[0] + ".lnk"))     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    try:
+        links_file = open(link_path.pop(), 'r')
+        links_root = ET.parse(links_file).getroot()
+        if (lang1+"_"+lang2) == lnk_folder:
+            for link in links_root.iter('link'):
+                if link.attrib['type'] == '1-1':
+                    link_string = link.attrib['xtargets'].split(';')
+                    link_map[link_string[0]] = link_string[1]
+        elif (lang2+"_"+lang1) == lnk_folder:
+            for link in links_root.iter('link'):
+                if link.attrib['type'] == '1-1':
+                    link_string = link.attrib['xtargets'].split(';')
+                    link_map[link_string[1]] = link_string[0]
+        else:
+            print("***impossible option****")
+            return None
+
+        links_file.close()
+        return link_map
+    except:
+        print("Could not open/parse the protocol {0},{1} link file. In path:{2} ".format(lang1,lang2,path) + sys.exc_info())
+        return None
 
 def find_file_in_path(path_to_file, idx, stat):
     if os.path.isfile(path_to_file):
@@ -308,16 +335,21 @@ def build_parallel_corpus(lang1, lang2, output_folder, statistics):
             if origin_language is None:
                 statistics.number_protocols_unobtainable_origin_lang += 1
                 continue
+            if origin_language != lang1 and origin_language != lang2:
+                statistics.number_protocols_origin_lang_not_any_of_two += 1
+                continue
+            second_id_to_text = get_id_to_text(second_root)
+            links = get_link_map(lang1, lang2, file_relative_path)
+            if links is None:
+                statistics.number_of_protocols_not_obtainable_link_file += 1
+                continue
+            statistics.number_of_valid_protocols += 1
             if origin_language == lang1:
                 statistics.number_of_protocols_originally_first_lang += 1
             elif origin_language == lang2:
                 statistics.number_of_protocols_originally_second_lang += 1
             else:
-                statistics.number_protocols_origin_lang_not_any_of_two += 1
-                continue
-            second_id_to_text = get_id_to_text(second_root)
-            links = get_link_map(lang1, lang2, file_relative_path)
-            statistics.number_of_valid_protocols += 1
+                print("2!!!!!!!Unavailable!!!!!!!!!")
             for sentence in first_root.iter('s'):
                 statistics.total_number_of_sentences += 1
                 if sentence.attrib['lang'] != lang1:
@@ -348,7 +380,7 @@ def build_parallel_corpus(lang1, lang2, output_folder, statistics):
                     elif origin_language == lang2:
                         statistics.number_of_sentences_in_originally_second_lang +=1
                     else:
-                        print("Unavailable")
+                        print("1!!!!!Unavailable!!!!!!")
                     statistics.number_of_valid_sentences += 1
                 except:
                     statistics.number_of_sentences_writing_exception += 1
@@ -358,10 +390,14 @@ if __name__ == "__main__":
     print(datetime.now().strftime('Started at: %Y-%m-%d %H:%M:%S'))
     stat_fr_en = CorpusStatistics()
     build_parallel_corpus('fr', 'en', result_output_folder + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), stat_fr_en)
+    print("\n=========Results of fr -> en =====")
     stat_fr_en.print_stat()
-    stat_en_fr = CorpusStatistics()
-    build_parallel_corpus('en', 'fr', result_output_folder + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), stat_en_fr)
-    stat_en_fr.print_stat()
+
+    #print(datetime.now().strftime('Started at: %Y-%m-%d %H:%M:%S'))
+    #stat_en_fr = CorpusStatistics()
+    #build_parallel_corpus('en', 'fr', result_output_folder + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), stat_en_fr)
+    #print("\n=========Results of en -> fr =====")
+    #stat_en_fr.print_stat()
 
     print(datetime.now().strftime('Finished at: %Y-%m-%d %H:%M:%S'))
 
