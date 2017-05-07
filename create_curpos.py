@@ -20,7 +20,7 @@ result_output_folder = "D:\\GitHub\\NLP_Lab\\Results"
 root_path = "D:\\GitHub\\NLP_Lab\\"
 
 # The language name abbreviation
-languages = ["en", "fr", "es", "ar", "ch", "ru"]
+languages = ["en", "fr", "es", "ar", "zh", "ru"]
 
 # A dictionary matching every language to the path of the folder containing the documents of the language
 lang_to_path = {x: os.path.join(root_path, x) for x in languages}
@@ -32,18 +32,33 @@ links = ["es_en", "ar_en", "fr_en", "ru_en", "zh_en"]
 language_pair_to_path = {x: os.path.join(root_path, "links", x) for x in links}
 
 
-languages_dict = {'fr' : [(['anglais'],'en'),
-                          (['français', 'francais'],'fr'),
-                          (['espagnol', 'espâgnol'],'es'),
-                          (['russe'],'ru'),
-                          (['chinois'],'zh'),
-                          (['arabe'], 'ar')],
-                  'en' : [(['english'],'en'),
-                          (['french'],'fr'),
-                          (['spanish'],'es'),
-                          (['russian'], 'ru'),
-                          (['chinese'], 'zh'),
-                          (['arabic'], 'ar')]}
+en_val =\
+    [(['english'],'en'),
+     (['french'],'fr'),
+     (['spanish'],'es'),
+     (['russian'], 'ru'),
+     (['chinese'], 'zh'),
+     (['arabic'], 'ar')]
+
+languages_dict = {
+    'fr' : [(['anglais'],'en'),
+            (['français', 'francais'],'fr'),
+            (['espagnol', 'espâgnol'],'es'),
+            (['russe'],'ru'),
+            (['chinois'],'zh'),
+            (['arabe'], 'ar')],
+    'en' : en_val,
+    'es': [(['ingles','inglés'], 'en'),
+           (['frances','francés'], 'fr'),
+           (['español'], 'es'),
+           (['ruso'], 'ru'),
+           (['chino'], 'zh'),
+           (['arabe','árabe'], 'ar')],
+    'ru': en_val,    # some original languages are filtered because the russian alphabet is used for the letters: H B A
+    'ar': en_val,
+    'zh': en_val
+}
+
 
 class CorpusStatistics:
     def __init__(self):
@@ -221,21 +236,25 @@ def find_original_language_in_one_file(xmlRoot, lang, path, idx, statistics):
                     if lang_word in extracted:
                         num += 1
                         original_lang1_compare = list_lang_tuple
-                        original_language += " " + lang_word
+                        original_language += lang_word + "-"
             if num == 0:
-                #print("In get_origin_language, num==0 extracted:{0} ,Where original_language:{1} ,In path:{2} ,In sentence id:{3}".format(
-                #    extracted, str(original_language), str(path), s.attrib['id']))
+                #print("In get_origin_language, num==0 extracted:{0} ,Where original_language:{1} ,In path: {2} ,In sentence id:{3}".format(
+                #    extracted, lang, str(path), s.attrib['id']))
                 statistics.number_protocols_origin_is0[idx] += 1
                 return None
             if num == 2:
-                #print("In get_origin_language, num==2 extracted:{0} ,Where original_language:{1} in path:{2}".format(extracted, str(original_language),str(path)))
+                #print("In get_origin_language, num==2 extracted:{0} ,Where original_language:{1} in path: {2},In sentence id:{3}".format(
+                #    extracted, str(original_language),str(path),s.attrib['id']))
                 statistics.number_protocols_origin_is2[idx] += 1
                 return None
             if num != 1:
-                #print("!!!! ", num, str(extracted), str(original_language), path)
+                #print("In get_origin_language, num>2 extracted:{0} ,Where original_language:{1} in path: {2},In sentence id:{3}".format(
+                #    extracted, str(original_language),str(path),s.attrib['id']))
                 statistics.number_protocols_origin_is_more[idx] += 1
                 return None
             statistics.number_protocols_origin_is1[idx] += 1
+            #print("In get_origin_language, num===1 extracted:{0} ,Where original_language:{1} in path: {2},In sentence id:{3}".format(
+            #    extracted, str(original_language),str(path),s.attrib['id']))
             return original_lang1_compare
     else:
         #print("went over the entire file: " + str(path) + " did not find any Original sentance")
@@ -385,13 +404,37 @@ def build_parallel_corpus(lang1, lang2, output_folder, statistics):
                 except:
                     statistics.number_of_sentences_writing_exception += 1
                     print("could not write to file: ", sys.exc_info())
+    print('Closing files')
+    lang1_file.close()
+    lang2_file.close()
+    index_file.close()
 
 if __name__ == "__main__":
-    print(datetime.now().strftime('Started at: %Y-%m-%d %H:%M:%S'))
-    stat_fr_en = CorpusStatistics()
-    build_parallel_corpus('fr', 'en', result_output_folder + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), stat_fr_en)
-    print("\n=========Results of fr -> en =====")
-    stat_fr_en.print_stat()
+    for lang_key in ['fr', 'es', 'ru', 'ar', 'zh']:
+        print('***********************************************************')
+        print(datetime.now().strftime('Started at: %Y-%m-%d %H:%M:%S'))
+        stat = CorpusStatistics()
+        build_parallel_corpus(lang_key, 'en', result_output_folder + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), stat)
+        print("\n=========Results of {0} -> en =====".format(lang_key))
+        stat.print_stat()
+
+    #print(datetime.now().strftime('Started at: %Y-%m-%d %H:%M:%S'))
+    #stat_es_en = CorpusStatistics()
+    #build_parallel_corpus('es', 'en', result_output_folder + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), stat_es_en)
+    #print("\n=========Results of es -> en =====")
+    #stat_es_en.print_stat()
+
+    #print(datetime.now().strftime('Started at: %Y-%m-%d %H:%M:%S'))
+    #stat_ru_en = CorpusStatistics()
+    #build_parallel_corpus('ru', 'en', result_output_folder + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), stat_ru_en)
+    #print("\n=========Results of ru -> en =====")
+    #stat_ru_en.print_stat()
+
+    #print(datetime.now().strftime('Started at: %Y-%m-%d %H:%M:%S'))
+    #stat_fr_en = CorpusStatistics()
+    #build_parallel_corpus('fr', 'en', result_output_folder + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), stat_fr_en)
+    #print("\n=========Results of fr -> en =====")
+    #stat_fr_en.print_stat()
 
     #print(datetime.now().strftime('Started at: %Y-%m-%d %H:%M:%S'))
     #stat_en_fr = CorpusStatistics()
