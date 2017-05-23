@@ -168,10 +168,10 @@ class CorpusStatistics:
         print("--->{0} protocols have more than two origin lang extracted from second language folder files. rate: {1}".format(
             self.number_protocols_origin_is_more[1],
             str(self.number_protocols_origin_is_more[1] / self.total_number_of_protocols)))
-        print("--->{0} protocols origin lang is 1. rate: {1}".format(
+        print("--->{0} protocols origin lang is 1 from first language dir. rate: {1}".format(
             self.number_protocols_origin_is1[0],
             str(self.number_protocols_origin_is1[0] / self.total_number_of_protocols)))
-        print("--->{0} protocols origin lang is 1. rate: {1}".format(
+        print("--->{0} protocols origin lang is 1 from second language dir. rate: {1}".format(
             self.number_protocols_origin_is1[1],
             str(self.number_protocols_origin_is1[1] / self.total_number_of_protocols)))
 
@@ -288,8 +288,9 @@ def get_link_map(lang1, lang2, path):
             for link in links_root.iter('link'):
                 if link.attrib['type'] == '1-1':
                     link_string = link.attrib['xtargets'].split(';')
-                    link_map[link_string[0]] = link_string[1]
+                    link_map[link_string[1]] = link_string[0]           # mistake in the lnk files - reverse order
         elif (lang2+"_"+lang1) == lnk_folder:
+            exit()
             for link in links_root.iter('link'):
                 if link.attrib['type'] == '1-1':
                     link_string = link.attrib['xtargets'].split(';')
@@ -424,23 +425,6 @@ if __name__ == "__main__":
     #print("\n=========Results of es -> en =====")
     #stat_es_en.print_stat()
 
-    #print(datetime.now().strftime('Started at: %Y-%m-%d %H:%M:%S'))
-    #stat_ru_en = CorpusStatistics()
-    #build_parallel_corpus('ru', 'en', result_output_folder + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), stat_ru_en)
-    #print("\n=========Results of ru -> en =====")
-    #stat_ru_en.print_stat()
-
-    #print(datetime.now().strftime('Started at: %Y-%m-%d %H:%M:%S'))
-    #stat_fr_en = CorpusStatistics()
-    #build_parallel_corpus('fr', 'en', result_output_folder + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), stat_fr_en)
-    #print("\n=========Results of fr -> en =====")
-    #stat_fr_en.print_stat()
-
-    #print(datetime.now().strftime('Started at: %Y-%m-%d %H:%M:%S'))
-    #stat_en_fr = CorpusStatistics()
-    #build_parallel_corpus('en', 'fr', result_output_folder + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), stat_en_fr)
-    #print("\n=========Results of en -> fr =====")
-    #stat_en_fr.print_stat()
 
     print(datetime.now().strftime('Finished at: %Y-%m-%d %H:%M:%S'))
 
