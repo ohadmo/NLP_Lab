@@ -102,6 +102,44 @@ def divide_to_chnuks(language_file, label_file, lang, corpusNouns, search_enum):
     translated_chunks.append(ChunkToWordsCounters(translated_chunk, corpusNouns, search_enum))
     return original_chunks, translated_chunks
 
+def combineSamplesNormalize(original_samples, translated_samples):
+    np.random.shuffle(original_samples)
+    np.random.shuffle(translated_samples)
+    print("no. of sampels in original: " + str(len(original_samples)))
+    print("no. of sampels in translated: " + str(len(translated_samples)))
+    retData = []
+    retLabels = []
+    for i in range(len(translated_samples)):
+        retData.append(original_samples[i])
+        retLabels.append(1)
+    for i in range(len(translated_samples)):
+        retData.append(translated_samples[i])
+        retLabels.append(0)
+    '''
+    mean = np.sum(retData, axis=0) / len(retData)
+    temp = -1* np.tile(mean,(len(retData),1))
+    variance = (np.array(retData) + temp)
+    variance = variance**2
+    variance = np.sum(variance, axis=0) / len(retData)
+    variance = np.sqrt(variance)
+    retData = (retData-mean)/variance
+    '''
+    _min = np.min(retData, axis=0)
+    _max = np.max(retData, axis=0)
+    retData = (retData - _min) / (_max - _min)
+    '''
+    print("Infinite indices:")
+    for i in range(len(retData)):
+        if np.isfinite(retData[i]).all() == False:
+            for j in range(len(retData[i])):
+                if np.isfinite(retData[i][j]) == False:
+                    if np.isnan(retData[i][j]) == False:
+                        print(retData[i][j])
+    '''
+    retData = np.nan_to_num(retData)
+    retData = retData.tolist()
+    return retData, retLabels
+
 
 def incrementCount(map, key):
     if key in map:
@@ -110,8 +148,8 @@ def incrementCount(map, key):
         map[key] = 1
 
 def RunOneFold(dataTrain, dataTest, labelsTrain, labelsTest, queue):
-    print("alive!")
-    clf = svm.SVC(kernel='rbf', gamma=0.001, C=0.01).fit(dataTrain, labelsTrain)
+    print(current_process().name + " alive!")
+    clf = svm.SVC(kernel='linear').fit(dataTrain, labelsTrain)
     predicted = clf.predict(dataTest)
     #clfModel = svmutil.svm_train(labelsTrain, dataTrain, '-s 0 -t 2 -q -c 1')
     #predicted = svmutil.svm_predict(labelsTest, dataTest, clfModel, '-q')
@@ -153,19 +191,7 @@ if __name__ == '__main__':
             valid_words_in_corpus = POSinCorpus(args.english_path, 2)
         o, t = divide_to_chnuks(args.english_path, args.labels_path, 'en', valid_words_in_corpus, SearchWordsOrPOS.FIND_POS)
 
-    np.random.shuffle(o)
-    np.random.shuffle(t)
-
-    data = []
-    label = []
-    print("no. of sampels in original: " + str(len(o)))
-    print("no. of sampels in translated: " + str(len(t)))
-    for i in range(len(t)):
-        data.append(o[i])
-        label.append(1)
-    for i in range(len(t)):
-        data.append(t[i])
-        label.append(0)
+    data, label = combineSamplesNormalize(o,t)
 
     print("***Starting MultiProcesses*** " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     print("number of samples:" + str(len(label)))
