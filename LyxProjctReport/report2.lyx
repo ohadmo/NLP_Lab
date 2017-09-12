@@ -1,0 +1,375 @@
+#LyX 2.2 created this file. For more info see http://www.lyx.org/
+\lyxformat 508
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\use_default_options true
+\begin_modules
+theorems-ams-bytype
+\end_modules
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Distinguishing Between Original and Translated Texts
+\end_layout
+
+\begin_layout Author
+Elad Tolochinsky, Ohad Mosaffi
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+This work aims to distinguish between original texts and translated texts.
+ Given a document written in some language, we wish to accurately say if
+ the document was originally written in that language of if it was translated
+ to it.
+ To distinguish such texts we use a linguistic concept called translationese.
+ Translated texts, in any language, can be considered a dialect oft his
+ language.
+ We cal this dialect translationese Linguistic research has proposed several
+ universal properties of translationese.
+ We use this properties of translationese in conjunction with machine learning
+ techniques to distinguish between translated texts and non-translated (original
+) texts.
+ Previous work 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "volansky2013features"
+
+\end_inset
+
+, on this subjects have tried to gauge which properties of translationese
+ can be successfully utilized to classify original and translated texts.
+ Our work reproduce the results achieved by 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "volansky2013features"
+
+\end_inset
+
+ on a different corpus - the UN parallel corpus.
+ The first part of this work is an automated derivation of the corpus.
+ We derived five bilingual parallel corpora, from English to any other official
+ UN language (French, Spanish, Russian, Arabic and Chinese).
+ 
+\end_layout
+
+\begin_layout Section
+Derivation of the Corpora
+\end_layout
+
+\begin_layout Standard
+The base of this work is the UN parallel corpus which is described at length
+ at 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "ziemski2016united"
+
+\end_inset
+
+.
+ The corpus is structured in a directory hierarchy, each language has a
+ directory which holds the documents in that language.
+ The documents are stored in a directory tree inside the appropriate language
+ folder in a way that the relative path of a document inside a specific
+ language directory is the same for all language directories, for example
+ the file 
+\emph on
+add_1.xml 
+\emph default
+has a French version at the path 
+\emph on
+
+\backslash
+fr
+\backslash
+1990
+\backslash
+trans
+\backslash
+wp_29
+\backslash
+1999
+\backslash
+14
+\backslash
+add_1.xml 
+\emph default
+and an English version at the path 
+\emph on
+
+\backslash
+en
+\backslash
+1990
+\backslash
+trans
+\backslash
+wp_29
+\backslash
+1999
+\backslash
+14
+\backslash
+add_1.xml.
+ 
+\emph default
+Every language pair has an additional directory which contains link files.
+ The link files defines the translation direction of two documents and they
+ reside at the same relative path as the documents, thus the link file of
+ 
+\emph on
+add_1.xml
+\emph default
+ is located at 
+\emph on
+
+\backslash
+fr_en
+\backslash
+1990
+\backslash
+trans
+\backslash
+wp_29
+\backslash
+1999
+\backslash
+14
+\backslash
+add_1.lnk
+\emph default
+.
+ Each link file maps the sentences 
+\end_layout
+
+\begin_layout Section
+Classification
+\end_layout
+
+\begin_layout Standard
+The methods we employ in this work are machine learning and specifically
+ classification.
+ Generally, given a set of labeled vectors 
+\begin_inset Formula $X\times Y$
+\end_inset
+
+ where 
+\begin_inset Formula $X\subset\mathbb{R}^{d}$
+\end_inset
+
+ and 
+\begin_inset Formula $Y=\left\{ 0,1\right\} $
+\end_inset
+
+which are drawn from some distribution 
+\begin_inset Formula $\mathcal{D}$
+\end_inset
+
+.
+ A classification function is a function 
+\begin_inset Formula $f:\mathbb{R}^{d}\rightarrow Y$
+\end_inset
+
+ such that with high probability 
+\begin_inset Formula $f\left(x\right)=y$
+\end_inset
+
+ for every 
+\begin_inset Formula $\left(x,y\right)\in D$
+\end_inset
+
+.
+ The process of computing such a function is called 
+\emph on
+training
+\emph default
+ and is based upon feeding the learning algorithm with know examples from
+ which it can 
+\begin_inset Quotes eld
+\end_inset
+
+learn
+\begin_inset Quotes erd
+\end_inset
+
+.
+ In this work we employ well know learning algorithms such as SVM and logistic
+ regression.
+ We will use the implementation of Pyrhon's Scipy package.
+ To sum up, in order for us to distinguish between original texts and translatio
+ns, we transform a document to a vector, we label that vector according
+ to the class of the document (translated or original) and we then proceed
+ to train the appropriate machine until we obtain a function which distinguishes
+ between translated and original.
+\end_layout
+
+\begin_layout Section
+From Documents to Vectors
+\end_layout
+
+\begin_layout Standard
+In the previous section we described a method in which we can distinguish
+ between different classes of vectors.
+ We are left with the problem of representing a document by a multi dimensional
+ numeric vector.
+ There are many ways to represent a document as a vector, perhaps the simplest
+ is called 'bag-of-words' in which every document is represented by a vector
+ of counters, every entry in the vector represent the number of occurrences
+ of a corpus word in this specific document.
+ However such simple representation may not be helpful in distinguishing
+ between original and translated texts.
+ That is where we employ translationese.
+ We use the hypothesized universal properties of translationese to derive
+ a numeric representation of documents.
+ As this properties represent the dialect of translated properties, we intuitive
+ly expect that will produce accurate classification results.
+ The work at 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "volansky2013features"
+
+\end_inset
+
+ have compared many of the universal properties of the translationese and
+ have found the ones that are most effective for distinguishing original
+ from translated.
+ We used the following properties
+\end_layout
+
+\begin_layout Itemize
+Function words
+\end_layout
+
+\begin_layout Itemize
+POS trigrams
+\end_layout
+
+\begin_layout Itemize
+POS bigrams
+\end_layout
+
+\begin_layout Standard
+In order to obtain a dataset for training our learning algorithms we tokenize
+ the text files and add part of speech tagging, we then break up a file
+ to chunks of about 
+\begin_inset Formula $2000$
+\end_inset
+
+ tokens.
+ Each chunk will be transformed into a vector according to the chosen property
+\end_layout
+
+\begin_layout Itemize
+Function words - Each chunk is transformed to a vector, where each entry
+ in the vector represents the frequency of a function word in the chunk.
+ We then normalize this quantity by multiplying it by 
+\begin_inset Formula $\frac{n}{2000}$
+\end_inset
+
+ where 
+\begin_inset Formula $n$
+\end_inset
+
+ is the size of the chunk.
+\end_layout
+
+\begin_layout Itemize
+POS trigrams - Each chunk is transformed to a vector, where each entry in
+ the vector is the number of occurrences of a POS trigram in the chunk.
+\end_layout
+
+\begin_layout Itemize
+POS bigrams - Each chunk is transformed to a vector, where each entry in
+ the vector is the number of occurrences of a POS bigram in the chunk.
+\end_layout
+
+\begin_layout Section
+Experiments and Results
+\end_layout
+
+\begin_layout Section
+Conclusions
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "report"
+options "plain"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
