@@ -18,6 +18,7 @@ from multiprocessing import Process, Queue, current_process
 import operator
 from enum import Enum
 import argparse
+import random
 
 CHUNK_SIZE = 2000
 
@@ -39,7 +40,7 @@ def readWordsFromFile(path):
     return wordsSet
 
 def wordsInCorpus(path, words_set):
-    print('words in corpus: ' + path)
+    print('wordsInCorpus: ' + path)
     valid_words = set()
     with open(path, 'r', encoding='cp1252') as eng_file:
         for line in eng_file:
@@ -49,6 +50,7 @@ def wordsInCorpus(path, words_set):
             for token in tokens:
                 if token in words_set:
                     valid_words.add(token)
+    print(str(len(valid_words)) + ' valid words from wordsInCorpus, out of ' + str(len(words_set)))
     return valid_words
 
 def POSinCorpus(path, ngrams):
@@ -71,14 +73,9 @@ def POSinCorpus(path, ngrams):
             except:
                 print("Exception POS line is:")
                 print(line)
-    #valid_POS = sorted(all_POS.items(), key=operator.itemgetter(1), reverse=True) # Decreasing Order
-    #temp = [x[0] for x in valid_POS]
-    #temp = temp[:400]
-    #valid_POS = set(temp)
     return dict(all_POS)
 
 def ChunkToWordsCounters(chunk, cNouns, idx):
-    # tokens = [x.strip().lower().split('_')[idx.value] for x in chunk]
     pronouns_count = {x: 0 for x in cNouns}
     for token in chunk:
         if token in cNouns:
@@ -126,6 +123,46 @@ def incrementCount(map, key):
     else:
         map[key] = 1
 
+def PosFindTokensAllLanguages(languages, pickle_name, work_path, tokenized_data_file_name, n_most_freq):
+    valid_pos_in_corpus = dict()
+    for lang in languages:
+        pos_pickle_path = os.path.join(work_path, lang, pickle_name)
+        if os.path.isfile(pos_pickle_path):
+            print("***loading from pickle in path" + str(pos_pickle_path))
+            with open(pos_pickle_path, 'rb') as f:
+                valid_words_in_one = pickle.load(f)
+        else:
+            print("***In lang " + lang + " calling POSinCorpus and saving POS words to pickle")
+            valid_words_in_one = POSinCorpus(os.path.join(work_path, lang, tokenized_data_file_name), 3)
+            with open(pos_pickle_path, 'wb') as f:
+                pickle.dump(valid_words_in_one, f)
+        for k, v in valid_words_in_one.items():
+            if k in valid_pos_in_corpus:
+                valid_pos_in_corpus[k] += v
+            else:
+                valid_pos_in_corpus[k] = v
+    ret_valid_POS = sorted(valid_pos_in_corpus.items(), key=operator.itemgetter(1), reverse=True)  # Decreasing Order
+    temp = [x[0] for x in ret_valid_POS][:n_most_freq]
+    return set(temp)
+
+def FuncPronounsFindTokensAllLanguages(words_file_path, languages, pickle_name, work_path, tokenized_data_file_name):
+    ret_valid_words_in_corpus = set()
+    file_words = readWordsFromFile(words_file_path)
+    for lang in languages:
+        pickle_path = os.path.join(work_path, lang, pickle_name)
+        if(os.path.isfile(pickle_path)):
+            print("***loading from pickle in path" + str(pickle_path))
+            with open(pickle_path, 'rb') as f:
+                ret_valid_words_in_corpus = ret_valid_words_in_corpus | pickle.load(f)
+        else:
+            print("***In lang " + lang + " calling wordsInCorpus and saving function/pronouns words to pickle")
+            words_in_one_corpus = wordsInCorpus(os.path.join(work_path, lang, tokenized_data_file_name), file_words)
+            with open(pickle_path,'wb') as f:
+                pickle.dump(words_in_one_corpus, f)
+            ret_valid_words_in_corpus = ret_valid_words_in_corpus | words_in_one_corpus
+    return ret_valid_words_in_corpus
+
+
 if __name__ == '__main__':
     print( "***Starting Time*** "  + datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     parser = argparse.ArgumentParser(description='This script runs an ML trained model according to specified features')
@@ -143,18 +180,8 @@ if __name__ == '__main__':
         if args.features == "Pronouns":
             file_words = readWordsFromFile(args.pronouns_path)
         elif args.features == "FunctionWords":
-            valid_words_in_corpus = set()
-            file_words = readWordsFromFile(args.funcwords_path)
-            for lang in args.languages.split(" "):
-                function_words_pickle_path = os.path.join(args.dicts_path, lang, 'function_words.p')
-                if os.path.isfile(function_words_pickle_path):
-                    print("*In lang " + lang + " loading function words from pickle file")
-                    valid_words_in_corpus = valid_words_in_corpus | pickle.load(open (function_words_pickle_path, 'rb'))
-                else:
-                    print("*In lang " + lang + " calling wordsInCorpus and saving function words to pickle")
-                    valid_words_in_one_corpus = wordsInCorpus(os.path.join(args.dicts_path, lang, 'en_tagged_tweetTokenizer.txt'), file_words)
-                    pickle.dump(valid_words_in_one_corpus,  open(function_words_pickle_path, 'wb') )
-                    valid_words_in_corpus =  valid_words_in_corpus | valid_words_in_one_corpus
+            valid_words_in_corpus = FuncPronounsFindTokensAllLanguages(args.funcwords_path, args.languages.split(" "),
+                                                                       'function_words.p', args.dicts_path,                                                                     'en_tagged_tweetTokenizer.txt')
             for lang in args.languages.split(" "):
                 dataOrg_file =  os.path.join(args.dicts_path, lang, 'dataOriginal_fw.p')
                 labelTrans_file = os.path.join(args.dicts_path, lang, 'dataTranslated_fw.p')
@@ -167,54 +194,89 @@ if __name__ == '__main__':
                     o, t = divide_to_chnuks(os.path.join(args.dicts_path, lang , 'en_tagged_tweetTokenizer.txt'),
                                             os.path.join(args.dicts_path, lang, lang + "-en.txt"),
                                             'en', valid_words_in_corpus, SearchWordsOrPOS.FIND_WORDS)
-                    #data, label = combineSamplesNormalize(o, t)
                     print("no. of sampels in original: " + str(len(o)))
                     print("no. of sampels in translated: " + str(len(t)))
                     pickle.dump(o, open(dataOrg_file, 'wb'))
                     pickle.dump(t, open(labelTrans_file, 'wb'))
 
     if "POS" in args.features:
-        valid_pos_in_corpus = dict()
         if args.features == "POSTrigrams":
+            valid_POS = PosFindTokensAllLanguages(args.languages.split(' '), '3pos.p',
+                                                  args.dicts_path, 'en_tagged_tweetTokenizer.txt', 400)
+
+            original_chunks = []
+            translated_chunks = []
+            features_org_chunks = []
+            features_trans_chunks = []
             for lang in args.languages.split(" "):
-                posTrigram_pickle_path = os.path.join(args.dicts_path, lang, '3pos.p')
-                if os.path.isfile(posTrigram_pickle_path):
-                    print("*In lang " + lang + " loading pos 3-gram words from pickle file")
-                    valid_words_in_one = pickle.load(open(posTrigram_pickle_path, 'rb'))
-                    for k,v in valid_words_in_one.items():
-                        if k in valid_pos_in_corpus:
-                            valid_pos_in_corpus[k] += v
-                        else:
-                            valid_pos_in_corpus[k] = v
+                print("start divide to chunks2: " + lang)
+                with open(os.path.join(args.dicts_path, lang , 'en_tagged_tweetTokenizer.txt'), 'r', encoding='cp1252') as dfile,\
+                        open(os.path.join(args.dicts_path, lang, lang + "-en.txt"), 'r', encoding='utf-8') as lfile:
+                    for line, label in zip(dfile, lfile):
+                        tokens = line.split(' ')
+                        tokens = [x.strip().lower().split('_')[SearchWordsOrPOS.FIND_POS.value] for x in tokens]
+                        if True:
+                            t = []
+                            for i in range(len(tokens) - 3 + 1):
+                                pos = ""
+                                for k in range(3):
+                                    pos += tokens[i + k] + "_"
+                                pos = pos[:-1]
+                                t.append(pos.upper())
+                            tokens = t
+                        if tokens != []:
+                            if label.strip() == 'en':
+                                original_chunks.append(tokens)
+                            else:
+                                translated_chunks.append(tokens)
+            print("about to shuffle")
+            random.shuffle(original_chunks)
+            random.shuffle(translated_chunks)
+
+            print("about to create features from original lines" + str(len(original_chunks)))
+            one_chunk = []
+            while original_chunks != []:
+                if (len(one_chunk) + len(original_chunks[0]) <= 2000):
+                    one_chunk.extend(original_chunks.pop(0))
                 else:
-                    print("*In lang " + lang + " calling POSinCorpus and saving 3posgram to pickle")
-                    valid_words_in_one = POSinCorpus(os.path.join(args.dicts_path, lang,"en_tagged_tweetTokenizer.txt"), 3)
-                    pickle.dump(valid_words_in_one, open(posTrigram_pickle_path, 'wb'))
-                    for k,v in valid_words_in_one.items():
-                        if k in valid_pos_in_corpus:
-                            valid_pos_in_corpus[k] += v
-                        else:
-                            valid_pos_in_corpus[k] = v
-            valid_POS = sorted(valid_pos_in_corpus.items(), key=operator.itemgetter(1), reverse=True) # Decreasing Order
-            temp = [x[0] for x in valid_POS][:400]
-            valid_POS = set(temp)
-            for lang in args.languages.split(" "):
-                dataOrg_file = os.path.join(args.dicts_path, lang, 'dataOriginal_pos.p')
-                dataTrans_file = os.path.join(args.dicts_path, lang, 'dataTranslated_pos.p')
-                if os.path.isfile(dataOrg_file) and os.path.isfile(dataTrans_file):
-                    print("*In lang " + lang + " loading data_pos.p and label_pos.p from pickle file")
-                    data = pickle.load(open(dataOrg_file, 'rb'))
-                    label = pickle.load(open(dataTrans_file, 'rb'))
+                    one_chunk.extend(original_chunks.pop(0))
+                    features_org_chunks.append(ChunkToWordsCounters(one_chunk, valid_POS, SearchWordsOrPOS.FIND_POS))
+                    one_chunk = []
+
+            print("about to create features from translated lines" + str(len(translated_chunks)))
+            one_chunk = []
+            while translated_chunks != []:
+                if (len(one_chunk) + len(translated_chunks[0]) <= 2000):
+                    one_chunk.extend(translated_chunks[0])
+                    del translated_chunks[0:1]
                 else:
-                    print("*In lang " + lang + " calling devide to chunks and dumping data_pos.p and label_pos.p ")
-                    o, t = divide_to_chnuks(os.path.join(args.dicts_path, lang , 'en_tagged_tweetTokenizer.txt'),
-                                            os.path.join(args.dicts_path, lang, lang + "-en.txt"),
-                                            'en', valid_POS, SearchWordsOrPOS.FIND_POS)
-                    #data, label = combineSamplesNormalize(o, t)
-                    print("no. of sampels in original: " + str(len(o)))
-                    print("no. of sampels in translated: " + str(len(t)))
-                    pickle.dump(np.array(o), open(dataOrg_file, 'wb'))
-                    pickle.dump(np.array(t), open(dataTrans_file, 'wb'))
+                    one_chunk.extend(translated_chunks[0])
+                    del translated_chunks[0:1]
+                    features_trans_chunks.append(ChunkToWordsCounters(one_chunk, valid_POS, SearchWordsOrPOS.FIND_POS))
+                    one_chunk = []
+
+            print("no. of sampels in original: " + str(len(features_org_chunks)))
+            print("no. of sampels in translated: " + str(len(features_trans_chunks)))
+            pickle.dump(np.array(features_org_chunks), open(os.path.join(args.dicts_path,'forg.p'), 'wb'))
+            pickle.dump(np.array(features_trans_chunks), open(os.path.join(args.dicts_path, 'ftrans.p'), 'wb'))
+
+            # for lang in args.languages.split(" "):
+            #     dataOrg_file = os.path.join(args.dicts_path, lang, 'dataOriginal_pos.p')
+            #     dataTrans_file = os.path.join(args.dicts_path, lang, 'dataTranslated_pos.p')
+            #     if os.path.isfile(dataOrg_file) and os.path.isfile(dataTrans_file):
+            #         print("*In lang " + lang + " loading data_pos.p and label_pos.p from pickle file")
+            #         data = pickle.load(open(dataOrg_file, 'rb'))
+            #         label = pickle.load(open(dataTrans_file, 'rb'))
+            #     else:
+            #         print("*In lang " + lang + " calling devide to chunks and dumping data_pos.p and label_pos.p ")
+            #         o, t = divide_to_chnuks(os.path.join(args.dicts_path, lang , 'en_tagged_tweetTokenizer.txt'),
+            #                                 os.path.join(args.dicts_path, lang, lang + "-en.txt"),
+            #                                 'en', valid_POS, SearchWordsOrPOS.FIND_POS)
+            #         #data, label = combineSamplesNormalize(o, t)
+            #         print("no. of sampels in original: " + str(len(o)))
+            #         print("no. of sampels in translated: " + str(len(t)))
+            #         pickle.dump(np.array(o), open(dataOrg_file, 'wb'))
+            #         pickle.dump(np.array(t), open(dataTrans_file, 'wb'))
 
         elif args.features == "POSBigrams":
             pass

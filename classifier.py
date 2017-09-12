@@ -14,14 +14,15 @@ import svmutil
 sample_per_lang = float('inf')
 features_num = None
 workDir = 'C:\\NLP\\'
-translated_name_file_path = 'dataTranslated_pos.p'
-original_name_file_path = 'dataOriginal_pos.p'
+translatd_name_file_path = 'dataTranslated_pos.p'
+originl_name_file_path = 'dataOriginal_pos.p'
 langs = ['fr','es','ar','ru']
 #langs =['ar','ru']
 
 
 def NormalizeData(data):
     print("Normalizing the entire combined data")
+
     # mean = np.sum(data, axis=0) / len(data)
     # temp = -1* np.tile(mean,(len(data),1))
     # variance = (np.array(data) + temp)
@@ -34,6 +35,7 @@ def NormalizeData(data):
     # _max = np.max(data, axis=0)
     # data[:] = (data - _min) / (_max - _min)
 
+
     # print("Infinite indices:")
     # for i in range(len(retData)):
     #     if np.isfinite(retData[i]).all() == False:
@@ -43,6 +45,7 @@ def NormalizeData(data):
     #                     print(retData[i][j])
 
     # data[:] = np.nan_to_num(data)
+
     data[:] = preprocessing.scale(data)
     data[:] = preprocessing.normalize(data)
 
@@ -105,15 +108,17 @@ if __name__ == '__main__':
             features_num = one_lang_translated_data.shape[1]
 
     # Creating balanced dataset
-    translated_data, translated_labels = CreateBalancedData(translated_name_file_path, sample_per_lang, features_num, 0)
-    original_data, original_labels = CreateBalancedData(original_name_file_path, sample_per_lang, features_num, 1)
+    translated_data, translated_labels = CreateBalancedData(translatd_name_file_path, sample_per_lang, features_num, 0)
+    original_data, original_labels = CreateBalancedData(originl_name_file_path, sample_per_lang, features_num, 1)
     data = np.concatenate([original_data, translated_data])
     label = np.concatenate([original_labels, translated_labels])
 
     # Shuffling after concatenating original & translated samples
-    shuffled_idx = returnShuffledIdx(len(label))
-    data = data[shuffled_idx,:]
-    label = label[shuffled_idx]
+    shuffledIdx = np.arange(len(label))
+    np.random.shuffle(shuffledIdx)
+    shuffled_idx = returnShuffledIdx(len())
+    data = data[shuffledIdx,:]
+    label = label[shuffledIdx]
 
     #Normalzing Data
     NormalizeData(data)
