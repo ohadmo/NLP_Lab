@@ -3,32 +3,29 @@
 # count pronouns frequencies.
 # data points = chunks, dimension = number of pronouns in corpus. values = frequencies. label = {T, O}
 
-#from sklearn.cross_validation import cross_val_score
-from sklearn import svm
-from sklearn.model_selection import KFold
 import numpy as np
 import sys
 import datetime
 import pickle
 import os.path
-import time
-from multiprocessing import Process, Queue, current_process
-#sys.path.append('D:\ohadm\Downloads\libsvm-3.22\python')
-#import svmutil
 import operator
 from enum import Enum
 import argparse
-import random
 
-CHUNK_SIZE = 2000
 
 class SearchWordsOrPOS(Enum):
     FIND_WORDS = 0
     FIND_POS = 1
 
+class POSNgram(Enum):
+    BIGRAM = 2
+    TRIGRAM = 3
+
+def retCurrentTime():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
 def readWordsFromFile(path):
-    print('in read words from file: ' + path)
+    print(retCurrentTime() + ' In readWordsFromFile: ' + path)
     wordsSet = set()
     with open(path,'r', encoding='utf-8') as file:
         for line in file:
@@ -40,7 +37,7 @@ def readWordsFromFile(path):
     return wordsSet
 
 def wordsInCorpus(path, words_set):
-    print('wordsInCorpus: ' + path)
+    print(retCurrentTime() + ' WordsInCorpus: ' + path)
     valid_words = set()
     with open(path, 'r', encoding='cp1252') as eng_file:
         for line in eng_file:
@@ -58,62 +55,63 @@ def POSinCorpus(path, ngrams):
     with open(path,'r') as file:
         for line in file:
             try:
-                pos_line = [x.strip().split('_')[1] for x in line.split(' ')]
+                # Aftr runing he opennlp toknizer there are some words which are separated by '?' or contains more tha one '_'
+                pos_line = [x.strip().rsplit('_',1) if len(x.strip().rsplit('_',1)) == 2 else x.strip().split('?') for x in line.split(' ')]
+                pos_line = [x[1] for x in pos_line]
+            except:
+                print("Exception POSinCorpus: " , line)
+            else:
                 if len(pos_line) < ngrams:
                     continue
                 for i in range(len(pos_line) - ngrams + 1):
-                    pos = ""
-                    for k in range(ngrams):
-                        pos += pos_line[i+k] + "_"
-                    pos = pos[:-1]
+                    pos = "_".join([pos_line[i+k] for k in range(ngrams)])
                     if pos not in all_POS:
                         all_POS[pos] = 1
                     else:
                         all_POS[pos] += 1
-            except:
-                print("Exception POS line is:")
-                print(line)
-    return dict(all_POS)
+    return all_POS
 
-def ChunkToWordsCounters(chunk, cNouns, idx):
+def ChunkToWordsCounters(chunk, cNouns, size_of_chunk):
     pronouns_count = {x: 0 for x in cNouns}
     for token in chunk:
         if token in cNouns:
             pronouns_count[token] += 1
-    return [((x / len(chunk))*(2000/len(chunk))) for x in  pronouns_count.values()]
+    return [((x / len(chunk))*(size_of_chunk/len(chunk))) for x in  pronouns_count.values()]
 
 
-def divide_to_chnuks(language_file, label_file, lang, corpusNouns, search_enum):
-    print("start divide to chunks")
+def divide_to_chnuks(language_file, label_file, lang, corpusNouns, search_enum, pos_n_gram, chunk_size):
+    print(retCurrentTime() + "starting divide_to_chnuks")
     original_chunks = []
     original_chunk = []
     translated_chunks = []
     translated_chunk = []
     with open(language_file, 'r', encoding='cp1252') as dfile, open(label_file, 'r', encoding='utf-8') as lfile:
         for line, label in zip(dfile, lfile):
-            tokens = line.split(' ')
-            tokens = [x.strip().lower().split('_')[search_enum.value] for x in tokens]
-            if search_enum == SearchWordsOrPOS.FIND_POS:
-                t = []
-                for i in range(len(tokens) - 3 + 1):
-                    pos = ""
-                    for k in range(3):
-                        pos += tokens[i + k] + "_"
-                    pos = pos[:-1]
-                    t.append(pos.upper())
-                tokens = t
-            if label.strip() == lang:
-                original_chunk += tokens
-                if len(original_chunk) > CHUNK_SIZE:
-                    original_chunks.append(ChunkToWordsCounters(original_chunk, corpusNouns, search_enum))
-                    original_chunk = []
+            try:
+                # tokens = [x.strip().lower().split('_')[search_enum.value] for x in line.split(' ')]
+                tokens = [x.strip().lower().rsplit('_',1) if len(x.strip().rsplit('_',1)) == 2 else x.strip().split('?') for x in line.split(' ')]
+                tokens = [x[search_enum.value] for x in tokens]
+            except:
+                print("exception divide_to_chunks in line:" , line)
             else:
-                translated_chunk += tokens
-                if len(translated_chunk) > CHUNK_SIZE:
-                    translated_chunks.append(ChunkToWordsCounters(translated_chunk, corpusNouns, search_enum))
-                    translated_chunk = []
-    original_chunks.append(ChunkToWordsCounters(original_chunk, corpusNouns, search_enum))
-    translated_chunks.append(ChunkToWordsCounters(translated_chunk, corpusNouns, search_enum))
+                if search_enum == SearchWordsOrPOS.FIND_POS:
+                    t = []
+                    for i in range(len(tokens) - pos_n_gram.value + 1):
+                        pos = "_".join([tokens[i + k] for k in range(pos_n_gram.value)])
+                        t.append(pos.upper())
+                    tokens = t
+                if label.strip() == lang:
+                    original_chunk += tokens
+                    if len(original_chunk) > chunk_size:
+                        original_chunks.append(ChunkToWordsCounters(original_chunk, corpusNouns, chunk_size))
+                        original_chunk = []
+                else:
+                    translated_chunk += tokens
+                    if len(translated_chunk) > chunk_size:
+                        translated_chunks.append(ChunkToWordsCounters(translated_chunk, corpusNouns, chunk_size))
+                        translated_chunk = []
+    original_chunks.append(ChunkToWordsCounters(original_chunk, corpusNouns, chunk_size))
+    translated_chunks.append(ChunkToWordsCounters(translated_chunk, corpusNouns, chunk_size))
     return original_chunks, translated_chunks
 
 
@@ -123,17 +121,17 @@ def incrementCount(map, key):
     else:
         map[key] = 1
 
-def PosFindTokensAllLanguages(languages, pickle_name, work_path, tokenized_data_file_name, n_most_freq):
+def PosFindTokensAllLanguages(languages, ngram, work_path, tokenized_data_file_name, n_most_freq):
     valid_pos_in_corpus = dict()
     for lang in languages:
-        pos_pickle_path = os.path.join(work_path, lang, pickle_name)
+        pos_pickle_path = os.path.join(work_path, lang, str(ngram)+"pos.p")
         if os.path.isfile(pos_pickle_path):
-            print("***loading from pickle in path" + str(pos_pickle_path))
+            print(retCurrentTime() + "***loading from pickle in path" + str(pos_pickle_path))
             with open(pos_pickle_path, 'rb') as f:
                 valid_words_in_one = pickle.load(f)
         else:
-            print("***In lang " + lang + " calling POSinCorpus and saving POS words to pickle")
-            valid_words_in_one = POSinCorpus(os.path.join(work_path, lang, tokenized_data_file_name), 3)
+            print(retCurrentTime() + "***In lang " + lang + " calling POSinCorpus and saving POS words to pickle")
+            valid_words_in_one = POSinCorpus(os.path.join(work_path, lang, tokenized_data_file_name), ngram)
             with open(pos_pickle_path, 'wb') as f:
                 pickle.dump(valid_words_in_one, f)
         for k, v in valid_words_in_one.items():
@@ -151,11 +149,11 @@ def FuncPronounsFindTokensAllLanguages(words_file_path, languages, pickle_name, 
     for lang in languages:
         pickle_path = os.path.join(work_path, lang, pickle_name)
         if(os.path.isfile(pickle_path)):
-            print("***loading from pickle in path" + str(pickle_path))
+            print(retCurrentTime() + "***loading from pickle in path " + str(pickle_path))
             with open(pickle_path, 'rb') as f:
                 ret_valid_words_in_corpus = ret_valid_words_in_corpus | pickle.load(f)
         else:
-            print("***In lang " + lang + " calling wordsInCorpus and saving function/pronouns words to pickle")
+            print(retCurrentTime() + "***calling wordsInCorpus and saving to pickle " + str(pickle_path))
             words_in_one_corpus = wordsInCorpus(os.path.join(work_path, lang, tokenized_data_file_name), file_words)
             with open(pickle_path,'wb') as f:
                 pickle.dump(words_in_one_corpus, f)
@@ -163,125 +161,204 @@ def FuncPronounsFindTokensAllLanguages(words_file_path, languages, pickle_name, 
     return ret_valid_words_in_corpus
 
 
+def CreateFeatureVectors(work_path, language, output_original_data_name, output_translated_data_name,
+                         lang_data_tagged_name, labeled_data_name, validTokensSet, wordsOrPos, pos_n_gram, size_of_chunk):
+    dataOrg_file = os.path.join(work_path, language, output_original_data_name)
+    dataTrans_file = os.path.join(work_path, language, output_translated_data_name)
+    if os.path.isfile(dataOrg_file) and os.path.isfile(dataTrans_file):
+        print(retCurrentTime() + "***loading from pickle in path: " + str(dataOrg_file) + " " + str(dataTrans_file))
+        with open(dataOrg_file, 'rb') as df:
+            data = pickle.load(df)
+        with open(dataTrans_file, 'rb') as lf:
+            label = pickle.load(lf)
+    else:
+        print(retCurrentTime() + "***calling divide to chunks and dumping: " + str(dataOrg_file) + " " + str(dataTrans_file))
+        data, label = divide_to_chnuks(os.path.join(work_path, language, lang_data_tagged_name),
+                                os.path.join(work_path, language, labeled_data_name),
+                                'en', validTokensSet, wordsOrPos, pos_n_gram, size_of_chunk)
+        print("no. of sampels in original: " + str(len(data)))
+        print("no. of sampels in translated: " + str(len(label)))
+        pickle.dump(np.array(data), open(dataOrg_file, 'wb'))
+        pickle.dump(np.array(label), open(dataTrans_file, 'wb'))
+    return data, label
+
+
+def createCombinedLanguagesOrgTransCorpora(org_out_path, trans_out_path, working_dir, languages,
+                                           tagged_file_name_each_language,
+                                           labeled_file_halfname_each_language, original_lang):
+    print(retCurrentTime() + " Starting createCombinedLanguagesOrgTransCorpora")
+    org_combined = open(org_out_path, 'w+', encoding='cp1252')
+    trans_combined = open(trans_out_path, 'w+', encoding='cp1252')
+
+    data_files = []
+    labels_files = []
+
+    done_list_data_files = []
+    done_list_labels_files = []
+
+    for lang in languages:
+        df = open(os.path.join(working_dir, lang, tagged_file_name_each_language), 'r', encoding='cp1252')
+        lf = open(os.path.join(working_dir, lang, lang + labeled_file_halfname_each_language), 'r', encoding='utf-8')
+        data_files.append(df)
+        labels_files.append(lf)
+
+    while (data_files != []):
+        n = np.random.randint(0, len(data_files))
+        write_data = data_files[n].readline()
+        write_label = labels_files[n].readline()
+
+        if write_data == '' or write_label == '':
+            done_list_data_files.append(data_files.pop(n))
+            done_list_data_files.append(labels_files.pop(n))
+        else:
+            if write_label.strip() == original_lang:
+                org_combined.write(write_data)
+            else:
+                trans_combined.write(write_data)
+    org_combined.close()
+    trans_combined.close()
+    for cf, cl in zip(done_list_data_files, done_list_labels_files):
+        cf.close()
+        cl.close()
+    print(retCurrentTime() + " Finished createCombinedLanguagesOrgTransCorpora")
+
+
+def getLineFeatures(line, search_enum, ngrams):
+    try:
+        # tokens = [x.strip().lower().split('_')[search_enum.value] for x in line.split()]
+        tokens = [x.strip().lower().rsplit('_', 1) if len(x.strip().rsplit('_', 1)) == 2 else x.strip().split('?') for x in line.split(' ')]
+        tokens = [x[search_enum.value] for x in tokens]
+    except:
+        print("exception getLineFeatures:", line)
+    else:
+        if search_enum == SearchWordsOrPOS.FIND_POS:
+            line_trigram = []
+            for i in range(len(tokens) - ngrams + 1):
+                pos_trigram = "_".join([tokens[i + k] for k in range(ngrams)])
+                line_trigram.append(pos_trigram.upper())
+            tokens = line_trigram
+        return tokens
+
+
+def getDataPoints(file_path, corpusNouns, search_enum, TriOrBi, size_of_chunk):
+    with open(file_path, 'r', encoding='cp1252') as file:
+        chunks = list()
+        current_chunk = list()
+        for line in file:
+            line_trigram = getLineFeatures(line, search_enum, TriOrBi)
+            if len(current_chunk) <= size_of_chunk:
+                current_chunk.extend(line_trigram)
+            else:
+                chunks.append(ChunkToWordsCounters(current_chunk, corpusNouns, size_of_chunk))
+                current_chunk = list()
+        return chunks
+
+def createSamplesPickleFromCombnidCorpora(org_combined_path, trans_combined_path, corpusNouns, SearchWordOrPos,
+                                          ngrams, size_of_chunk, working_dir, output_org_pickle_name,
+                                          output_trans_pickle_name):
+    print("Start createSamplesPickleFromCombnidCorpora" + retCurrentTime())
+    original_data = getDataPoints(org_combined_path, corpusNouns, SearchWordOrPos, ngrams, size_of_chunk)
+    translated_data = getDataPoints(trans_combined_path, corpusNouns, SearchWordOrPos, ngrams, size_of_chunk)
+    print("no. of sampels in original: " + str(len(original_data)))
+    print("no. of sampels in translated: " + str(len(translated_data)))
+    pickle.dump(original_data, open(os.path.join(working_dir, output_org_pickle_name), 'wb'))
+    pickle.dump(translated_data, open(os.path.join(working_dir, output_trans_pickle_name), 'wb'))
+    print("finished createSamplesPickleFromCombnidCorpora" + retCurrentTime())
+
 if __name__ == '__main__':
-    print( "***Starting Time*** "  + datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
-    parser = argparse.ArgumentParser(description='This script runs an ML trained model according to specified features')
+    print( "***Starting Time*** "  + retCurrentTime())
+    parser = argparse.ArgumentParser(description='This script extract features from the data and av to pickle')
     parser.add_argument('features', help='Search for words or post in corpus POSBigrams POSTrigrams FunctionWords Pronouns',
                         choices=['POSBigrams', 'POSTrigrams', 'FunctionWords', 'Pronouns'])
+    parser.add_argument('mode', help='Two options are available: '
+                                     'CombinedLanguageChunks(CLC) Original and Translated chunks are built from lines '
+                                     'from different languages. '
+                                     'SeparatedLanguageChunks(SLC) chunks are built for each language separately.',
+                        choices=['CLC', 'SLC'])
     parser.add_argument('--pronouns_path', help='Specify the pronouns file path', required=True)
     parser.add_argument('--funcwords_path', help='Specify the function words file path', required=True)
     parser.add_argument('--dicts_path', help="dicts folder path", required=True)
-    parser.add_argument('--languages', help="languages to work on from dict",required=True)
+    parser.add_argument('--languages', help="languages to apply this scrip on separated by a blank space", required=True)
+    parser.add_argument('--pos_top_n', help="specify the number of the top frequent  Bigrams/Trigrams to pick in all corpora ", required=True)
+    parser.add_argument('--chunk_size',help="defines the chunk size", required=True)
     args = parser.parse_args()
-    print(args)
-
 
     if args.features == "Pronouns" or args.features == "FunctionWords":
         if args.features == "Pronouns":
-            file_words = readWordsFromFile(args.pronouns_path)
-        elif args.features == "FunctionWords":
+            valid_words_in_corpus = FuncPronounsFindTokensAllLanguages(args.pronouns_path, args.languages.split(" "),
+                                                                       'pronouns_words.p', args.dicts_path,'en_tagged_tweetTokenizer.txt')
+        else: # args.features equals "FunctionWords"
             valid_words_in_corpus = FuncPronounsFindTokensAllLanguages(args.funcwords_path, args.languages.split(" "),
-                                                                       'function_words.p', args.dicts_path,                                                                     'en_tagged_tweetTokenizer.txt')
+                                                                       'function_words.p', args.dicts_path, 'en_tagged_tweetTokenizer.txt')
+        if args.mode == "SLC":
             for lang in args.languages.split(" "):
-                dataOrg_file =  os.path.join(args.dicts_path, lang, 'dataOriginal_fw.p')
-                labelTrans_file = os.path.join(args.dicts_path, lang, 'dataTranslated_fw.p')
-                if os.path.isfile(dataOrg_file) and os.path.isfile(labelTrans_file):
-                    print("*In lang " + lang + " loading data.p and label.p from pickle file")
-                    data = pickle.load(open(dataOrg_file, 'rb'))
-                    label = pickle.load(open(labelTrans_file, 'rb'))
-                else:
-                    print("*In lang " + lang + " calling devide to chunks and dumping data.p and label.p ")
-                    o, t = divide_to_chnuks(os.path.join(args.dicts_path, lang , 'en_tagged_tweetTokenizer.txt'),
-                                            os.path.join(args.dicts_path, lang, lang + "-en.txt"),
-                                            'en', valid_words_in_corpus, SearchWordsOrPOS.FIND_WORDS)
-                    print("no. of sampels in original: " + str(len(o)))
-                    print("no. of sampels in translated: " + str(len(t)))
-                    pickle.dump(o, open(dataOrg_file, 'wb'))
-                    pickle.dump(t, open(labelTrans_file, 'wb'))
-
+                data, label = CreateFeatureVectors(args.dicts_path, lang, 'dataOriginal_{0}.p'.format(str.lower(args.features)),
+                                                   'dataTranslated_{0}.p'.format(str.lower(args.features)),
+                                                   'en_tagged_tweetTokenizer.txt', lang + "-en.txt", valid_words_in_corpus,
+                                                   SearchWordsOrPOS.FIND_WORDS, None, int(args.chunk_size))
+        else: # args.mode equals "CLC"
+            org_combined_path = 'C:\\NLP\\combinedOrg.txt'
+            trans_combined_path = 'C:\\NLP\\combinedTrans.txt'
+            if not os.path.isfile(org_combined_path) and not os.path.isfile(trans_combined_path):
+                createCombinedLanguagesOrgTransCorpora(org_combined_path, trans_combined_path,
+                                                       args.dicts_path, args.languages.split(" "),
+                                                       'en_tagged_tweetTokenizer.txt', "-en.txt", 'en')
+            else:
+                print("CombinedCombinedLanguagesOrgTransCorpora already exists")
+            createSamplesPickleFromCombnidCorpora(org_combined_path, trans_combined_path, valid_words_in_corpus,
+                                                  SearchWordsOrPOS.FIND_WORDS,
+                                                  None, int(args.chunk_size), args.dicts_path,
+                                                  'all_original_samples_{0}.p'.format(str.lower(args.features)),
+                                                  'all_translated_samples_{0}.p'.format(str.lower(args.features)))
     if "POS" in args.features:
+        chosenNgram = None
         if args.features == "POSTrigrams":
-            valid_POS = PosFindTokensAllLanguages(args.languages.split(' '), '3pos.p',
-                                                  args.dicts_path, 'en_tagged_tweetTokenizer.txt', 400)
+            chosenNgram = POSNgram.TRIGRAM
+        else:
+            chosenNgram = POSNgram.BIGRAM
 
-            original_chunks = []
-            translated_chunks = []
-            features_org_chunks = []
-            features_trans_chunks = []
+        valid_POS = PosFindTokensAllLanguages(args.languages.split(' '), chosenNgram.value,
+                                              args.dicts_path, 'en_tagged_tweetTokenizer.txt', int(args.pos_top_n))
+        if args.mode == "SLC":
             for lang in args.languages.split(" "):
-                print("start divide to chunks2: " + lang)
-                with open(os.path.join(args.dicts_path, lang , 'en_tagged_tweetTokenizer.txt'), 'r', encoding='cp1252') as dfile,\
-                        open(os.path.join(args.dicts_path, lang, lang + "-en.txt"), 'r', encoding='utf-8') as lfile:
-                    for line, label in zip(dfile, lfile):
-                        tokens = line.split(' ')
-                        tokens = [x.strip().lower().split('_')[SearchWordsOrPOS.FIND_POS.value] for x in tokens]
-                        if True:
-                            t = []
-                            for i in range(len(tokens) - 3 + 1):
-                                pos = ""
-                                for k in range(3):
-                                    pos += tokens[i + k] + "_"
-                                pos = pos[:-1]
-                                t.append(pos.upper())
-                            tokens = t
-                        if tokens != []:
-                            if label.strip() == 'en':
-                                original_chunks.append(tokens)
-                            else:
-                                translated_chunks.append(tokens)
-            print("about to shuffle")
-            random.shuffle(original_chunks)
-            random.shuffle(translated_chunks)
-
-            print("about to create features from original lines" + str(len(original_chunks)))
-            one_chunk = []
-            while original_chunks != []:
-                if (len(one_chunk) + len(original_chunks[0]) <= 2000):
-                    one_chunk.extend(original_chunks.pop(0))
-                else:
-                    one_chunk.extend(original_chunks.pop(0))
-                    features_org_chunks.append(ChunkToWordsCounters(one_chunk, valid_POS, SearchWordsOrPOS.FIND_POS))
-                    one_chunk = []
-
-            print("about to create features from translated lines" + str(len(translated_chunks)))
-            one_chunk = []
-            while translated_chunks != []:
-                if (len(one_chunk) + len(translated_chunks[0]) <= 2000):
-                    one_chunk.extend(translated_chunks[0])
-                    del translated_chunks[0:1]
-                else:
-                    one_chunk.extend(translated_chunks[0])
-                    del translated_chunks[0:1]
-                    features_trans_chunks.append(ChunkToWordsCounters(one_chunk, valid_POS, SearchWordsOrPOS.FIND_POS))
-                    one_chunk = []
-
-            print("no. of sampels in original: " + str(len(features_org_chunks)))
-            print("no. of sampels in translated: " + str(len(features_trans_chunks)))
-            pickle.dump(np.array(features_org_chunks), open(os.path.join(args.dicts_path,'forg.p'), 'wb'))
-            pickle.dump(np.array(features_trans_chunks), open(os.path.join(args.dicts_path, 'ftrans.p'), 'wb'))
-
-            # for lang in args.languages.split(" "):
-            #     dataOrg_file = os.path.join(args.dicts_path, lang, 'dataOriginal_pos.p')
-            #     dataTrans_file = os.path.join(args.dicts_path, lang, 'dataTranslated_pos.p')
-            #     if os.path.isfile(dataOrg_file) and os.path.isfile(dataTrans_file):
-            #         print("*In lang " + lang + " loading data_pos.p and label_pos.p from pickle file")
-            #         data = pickle.load(open(dataOrg_file, 'rb'))
-            #         label = pickle.load(open(dataTrans_file, 'rb'))
-            #     else:
-            #         print("*In lang " + lang + " calling devide to chunks and dumping data_pos.p and label_pos.p ")
-            #         o, t = divide_to_chnuks(os.path.join(args.dicts_path, lang , 'en_tagged_tweetTokenizer.txt'),
-            #                                 os.path.join(args.dicts_path, lang, lang + "-en.txt"),
-            #                                 'en', valid_POS, SearchWordsOrPOS.FIND_POS)
-            #         #data, label = combineSamplesNormalize(o, t)
-            #         print("no. of sampels in original: " + str(len(o)))
-            #         print("no. of sampels in translated: " + str(len(t)))
-            #         pickle.dump(np.array(o), open(dataOrg_file, 'wb'))
-            #         pickle.dump(np.array(t), open(dataTrans_file, 'wb'))
-
-        elif args.features == "POSBigrams":
-            pass
-            #valid_words_in_corpus = POSinCorpus(args.english_path, 2)
-            #o, t = divide_to_chnuks(args.english_path, args.labels_path, 'en', valid_words_in_corpus, SearchWordsOrPOS.FIND_POS)
-
-    print("***Starting MultiProcesses*** " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
-    print("***Finish Time*** " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
+                data, label = CreateFeatureVectors(args.dicts_path, lang, 'dataOriginal_{0}pos.p'.format(chosenNgram.value),
+                                                   'dataTranslated_{0}pos.p'.format(chosenNgram.value),
+                                                   'en_tagged_tweetTokenizer.txt', lang+"-en.txt", valid_POS,
+                                                   SearchWordsOrPOS.FIND_POS, chosenNgram, int(args.chunk_size))
+        else: #args.mode equals 'CLC'
+            org_combined_path = 'C:\\NLP\\combinedOrg.txt'
+            trans_combined_path = 'C:\\NLP\\combinedTrans.txt'
+            if not os.path.isfile(org_combined_path) and not os.path.isfile(trans_combined_path):
+                createCombinedLanguagesOrgTransCorpora(org_combined_path, trans_combined_path,
+                                                       args.dicts_path, args.languages.split(" "),
+                                                       'en_tagged_tweetTokenizer.txt', "-en.txt", 'en')
+            else:
+                print("CombinedCombinedLanguagesOrgTransCorpora already exists")
+            createSamplesPickleFromCombnidCorpora(org_combined_path, trans_combined_path, valid_POS,
+                                                  SearchWordsOrPOS.FIND_POS,
+                                                  chosenNgram.value, int(args.chunk_size), args.dicts_path,
+                                                  'all_original_samples_{0}grams.p'.format(chosenNgram.value),
+                                                  'all_translated_samples_{0}grams.p'.format(chosenNgram.value))
+        # else: # args.features equals "POSBigrams"
+        #     valid_POS = PosFindTokensAllLanguages(args.languages.split(' '), 2,
+        #                                           args.dicts_path, 'en_tagged_tweetTokenizer.txt', int(args.pos_top_n))
+        #     if args.mode == "SLC":
+        #         for lang in args.languages.split(" "):
+        #             data, label = CreateFeatureVectors(args.dicts_path, lang, 'dataOriginal_2pos.p', 'dataTranslated_2pos.p',
+        #                                                'en_tagged_tweetTokenizer.txt', lang+"-en.txt", valid_POS,
+        #                                                SearchWordsOrPOS.FIND_POS, POSNgram.BIGRAM, int(args.chunk_size))
+        #     else: #args.mode equals 'CLC'
+        #         org_combined_path = 'C:\\NLP\\combinedOrg.txt'
+        #         trans_combined_path = 'C:\\NLP\\combinedTrans.txt'
+        #         if not os.path.isfile(org_combined_path) and not os.path.isfile(trans_combined_path):
+        #             createCombinedLanguagesOrgTransCorpora(org_combined_path, trans_combined_path,
+        #                                                    args.dicts_path, args.languages.split(" "),
+        #                                                    'en_tagged_tweetTokenizer.txt', "-en.txt", 'en')
+        #         else:
+        #             print("CombinedCombinedLanguagesOrgTransCorpora already exists")
+        #         createSamplesPickleFromCombnidCorpora(org_combined_path, trans_combined_path, valid_POS,
+        #                                               SearchWordsOrPOS.FIND_POS,
+        #                                               2, args.chunk_size, args.dicts_path,
+        #                                               'all_original_samples_bigrams.p',
+        #                                               'all_translated_samples_bigrams.p')
+    print("***Finish Time*** " + retCurrentTime())

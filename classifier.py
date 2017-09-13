@@ -1,3 +1,4 @@
+import argparse
 import pickle
 import numpy as np
 from sklearn import svm, linear_model, preprocessing
@@ -11,41 +12,8 @@ sys.path.append('D:\ohadm\Downloads\libsvm-3.22\python')
 import svmutil
 
 
-sample_per_lang = float('inf')
-features_num = None
-workDir = 'C:\\NLP\\'
-translatd_name_file_path = 'dataTranslated_pos.p'
-originl_name_file_path = 'dataOriginal_pos.p'
-langs = ['fr','es','ar','ru']
-#langs =['ar','ru']
-
-
 def NormalizeData(data):
     print("Normalizing the entire combined data")
-
-    # mean = np.sum(data, axis=0) / len(data)
-    # temp = -1* np.tile(mean,(len(data),1))
-    # variance = (np.array(data) + temp)
-    # variance = variance**2
-    # variance = np.sum(variance, axis=0) / len(data)
-    # variance = np.sqrt(variance)
-    # data[:] = (data-mean)/variance
-    #
-    # _min = np.min(data, axis=0)
-    # _max = np.max(data, axis=0)
-    # data[:] = (data - _min) / (_max - _min)
-
-
-    # print("Infinite indices:")
-    # for i in range(len(retData)):
-    #     if np.isfinite(retData[i]).all() == False:
-    #         for j in range(len(retData[i])):
-    #             if np.isfinite(retData[i][j]) == False:
-    #                 if np.isnan(retData[i][j]) == False:
-    #                     print(retData[i][j])
-
-    # data[:] = np.nan_to_num(data)
-
     data[:] = preprocessing.scale(data)
     data[:] = preprocessing.normalize(data)
 
@@ -85,11 +53,11 @@ def returnShuffledIdx(numOfObjs):
     np.random.shuffle(shuffledIdx)
     return shuffledIdx
 
-def CreateBalancedData(fileName, num_samples_per_lang, num_features, zero_one_label):
-    data = np.empty((num_samples_per_lang * len(langs), num_features))
-    labels = np.empty(num_samples_per_lang * len(langs))
-    for i in range(len(langs)):
-        with open(os.path.join(workDir,langs[i],fileName),'rb') as lang_file:
+def CreateBalancedData(fileName, num_samples_per_lang, num_features, langs_list, work_dir, zero_one_label):
+    data = np.empty((num_samples_per_lang * len(langs_list), num_features))
+    labels = np.empty(num_samples_per_lang * len(langs_list))
+    for i in range(len(langs_list)):
+        with open(os.path.join(work_dir, langs_list[i], fileName),'rb') as lang_file:
             one_lang_data = pickle.load(lang_file)
             print("!!! In path " + lang_file.name + ", choosing randomly " + str(num_samples_per_lang) + " out of " + str(len(one_lang_data)))
             randomIncs = returnShuffledIdx(one_lang_data.shape[0])
@@ -98,27 +66,78 @@ def CreateBalancedData(fileName, num_samples_per_lang, num_features, zero_one_la
             labels[i * num_samples_per_lang: (i + 1) * num_samples_per_lang] = np.full(num_samples_per_lang,zero_one_label)
     return data, labels
 
-if __name__ == '__main__':
-    # Loading translated data samples from each language folder, the num of samples taken from each folder is determined
-    # by the language with the least amount of translated samples in it
-    for i in range(len(langs)):
-        with open('C:\\NLP\\' + langs[i] + '\\dataTranslated_pos.p', 'rb') as transFile:
-            one_lang_translated_data = np.array(pickle.load(transFile))
-            sample_per_lang = one_lang_translated_data.shape[0] if (one_lang_translated_data.shape[0] < sample_per_lang) else sample_per_lang
-            features_num = one_lang_translated_data.shape[1]
 
-    # Creating balanced dataset
-    translated_data, translated_labels = CreateBalancedData(translatd_name_file_path, sample_per_lang, features_num, 0)
-    original_data, original_labels = CreateBalancedData(originl_name_file_path, sample_per_lang, features_num, 1)
+def get_data_and_labels(translated_name_file_path, original_name_file_path,
+                        sample_per_lang, features_num, langs_list, work_dir):
+    translated_data, translated_labels = \
+        CreateBalancedData(translated_name_file_path, sample_per_lang, features_num, langs_list, work_dir, 0)
+    original_data, original_labels = \
+        CreateBalancedData(original_name_file_path, sample_per_lang, features_num, langs_list, work_dir,  1)
     data = np.concatenate([original_data, translated_data])
     label = np.concatenate([original_labels, translated_labels])
+    return data, label
+
+
+def get_data_and_label_from_p(file_name, dir, label):
+    with open(os.path.join(dir, file_name), 'rb') as file:
+        samples = np.array(pickle.load(file))
+        labels =  np.full(len(samples), label)
+        return samples, labels
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='This script is responsible for running a classifier using 10fold'
+                                                 ' cross validations. ')
+    parser.add_argument('mode', help='Two options are available:(according to the running mode of make_features.py) '
+                                     'CombinedLanguageChunks(CLC) Original and Translated chunks are built from lines '
+                                     'of different languages. '
+                                     'SeparatedLanguageChunks(SLC) chunks are built for each language separately.',
+                        choices=['CLC', 'SLC'])
+    parser.add_argument('--working_dir', help='Specify the working dir path', required=True)
+    parser.add_argument('--translated_samples_file_name',
+                        help='In CombinedLanguageChunks mode: specify The name of the translated samples file '
+                             'which is located in each of the language dirs under working dir path '
+                             'In SeparatedLanguageChunks mode: specify the name of the combined translated file '
+                             'which should be located under working dir', required=True)
+    parser.add_argument('--original_samples_file_name',
+                        help='In CombinedLanguageChunks mode: specify The name of the original samples file '
+                             'which is located in each of the language dirs under working dir path '
+                             'In SeparatedLanguageChunks mode: specify the name of the combined original file '
+                             'which should be located under working dir', required=True)
+    parser.add_argument('--languages', help="languages to apply this scrip on separated by a blank space", required=True)
+    args = parser.parse_args()
+
+    if args.mode == "SLC":
+        # Loading translated data samples from each language folder, the num of samples taken from each folder is determined
+        # by the language with the least amount of translated samples in it
+        sample_per_lang = float('inf')
+        features_num = None
+        for lang in args.languages.split(" "):
+            with open(os.path.join(args.working_dir, lang, args.translated_samples_file_name), 'rb') as transFile:
+                one_lang_translated_data = np.array(pickle.load(transFile))
+                sample_per_lang = one_lang_translated_data.shape[0] if (one_lang_translated_data.shape[0] < sample_per_lang) else sample_per_lang
+                features_num = one_lang_translated_data.shape[1]
+
+        # Creating balanced dataset
+        data, label = get_data_and_labels(args.original_samples_file_name, args.translated_samples_file_name,
+                                          sample_per_lang, features_num, args.languages.split(" "), args.working_dir)
+    else: #args.mode equals "CLC"
+        translated_data, translated_labels = \
+            get_data_and_label_from_p(args.translated_samples_file_name, args.working_dir, 0)
+        original_data, original_labels = \
+            get_data_and_label_from_p(args.original_samples_file_name, args.working_dir, 1)
+
+        sidx = returnShuffledIdx(len(translated_labels))
+        original_data=original_data[sidx,:]
+        original_labels = original_labels[sidx]
+
+        data = np.concatenate((translated_data, original_data))
+        label = np.concatenate((translated_labels, original_labels))
 
     # Shuffling after concatenating original & translated samples
-    shuffledIdx = np.arange(len(label))
-    np.random.shuffle(shuffledIdx)
-    shuffled_idx = returnShuffledIdx(len())
-    data = data[shuffledIdx,:]
-    label = label[shuffledIdx]
+    shuffled_idx = returnShuffledIdx(len(label))
+    data = data[shuffled_idx,:]
+    label = label[shuffled_idx]
 
     #Normalzing Data
     NormalizeData(data)

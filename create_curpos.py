@@ -419,17 +419,5 @@ if __name__ == "__main__":
         print("\n=========Results of {0} -> en =====".format(lang_key))
         stat.print_stat()
 
-    #print(datetime.now().strftime('Started at: %Y-%m-%d %H:%M:%S'))
-    #stat_es_en = CorpusStatistics()
-    #build_parallel_corpus('es', 'en', result_output_folder + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'), stat_es_en)
-    #print("\n=========Results of es -> en =====")
-    #stat_es_en.print_stat()
-
-
     print(datetime.now().strftime('Finished at: %Y-%m-%d %H:%M:%S'))
 
-
-# TODO: Add calls for build_parallel_corpus with the rest of the languages note that ordeer of the languages is important
-# TODO: The language order should be the same as the order in the link files
-# TODO: For example, the name of the french- english link folder is "fr_en", so the call will be
-# TODO build_parallel_corpus('fr', 'en', 'C:\\Users\\Elad\\NLP_pro') and nor build_parallel_corpus('en', 'fr', 'C:\\Users\\Elad\\NLP_pro')
