@@ -109,8 +109,8 @@ This work aims to distinguish between original texts and translated texts.
  language.
  We call this dialect translationese.
  Linguistic researches have proposed several universal properties of translation
-ese which we use in conjunction with supervissed machine learning techniques
- to distinguish between translated texts and non-translated (original) texts.
+ese which we use in conjunction with machine learning techniques to distinguish
+ between translated texts and non-translated (original) texts.
  Previous work 
 \begin_inset CommandInset citation
 LatexCommand cite
@@ -122,14 +122,7 @@ key "volansky2013features"
  can be utilized to successfully classify original and translated texts
  by performing an extensive exploration of that ability of different feature
  sets .
- Another work 
-\begin_inset CommandInset citation
-LatexCommand cite
-key "rabinovich2016unsupervised"
-
-\end_inset
-
-, .Our work reproduce the results achieved by 
+ Our work reproduce the results achieved by 
 \begin_inset CommandInset citation
 LatexCommand cite
 key "volansky2013features"
