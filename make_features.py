@@ -11,6 +11,7 @@ import operator
 from enum import Enum
 import argparse
 
+en_tagged_encoding = None
 
 class SearchWordsOrPOS(Enum):
     FIND_WORDS = 0
@@ -39,7 +40,7 @@ def readWordsFromFile(path):
 def wordsInCorpus(path, words_set):
     print(retCurrentTime() + ' WordsInCorpus: ' + path)
     valid_words = set()
-    with open(path, 'r', encoding='cp1252') as eng_file:
+    with open(path, 'r', encoding=en_tagged_encoding) as eng_file:
         for line in eng_file:
             if len(valid_words) == len(words_set):
                 return valid_words
@@ -52,7 +53,7 @@ def wordsInCorpus(path, words_set):
 
 def POSinCorpus(path, ngrams):
     all_POS = dict()
-    with open(path,'r') as file:
+    with open(path,'r', encoding=en_tagged_encoding) as file:
         for line in file:
             try:
                 # Aftr runing he opennlp toknizer there are some words which are separated by '?' or contains more than one '_'
@@ -85,7 +86,7 @@ def divide_to_chnuks(language_file, label_file, lang, corpusNouns, search_enum, 
     original_chunk = []
     translated_chunks = []
     translated_chunk = []
-    with open(language_file, 'r', encoding='cp1252') as dfile, open(label_file, 'r', encoding='utf-8') as lfile:
+    with open(language_file, 'r', encoding=en_tagged_encoding) as dfile, open(label_file, 'r', encoding='utf-8') as lfile:
         for line, label in zip(dfile, lfile):
             try:
                 # tokens = [x.strip().lower().split('_')[search_enum.value] for x in line.split(' ')]
@@ -116,7 +117,7 @@ def divide_to_chnuks(language_file, label_file, lang, corpusNouns, search_enum, 
 
 
 
-def PosFindTokensAllLanguages(languages, ngram, work_path, tokenized_data_file_name, n_most_freq):
+def PosFindTokensAllLanguages(languages, ngram, work_path, tagged_data_file_name, n_most_freq):
     valid_pos_in_corpus = dict()
     for lang in languages:
         pos_pickle_path = os.path.join(work_path, lang, str(ngram)+"pos.p")
@@ -126,7 +127,7 @@ def PosFindTokensAllLanguages(languages, ngram, work_path, tokenized_data_file_n
                 valid_words_in_one = pickle.load(f)
         else:
             print(retCurrentTime() + "***In lang " + lang + " calling POSinCorpus and saving POS words to pickle")
-            valid_words_in_one = POSinCorpus(os.path.join(work_path, lang, tokenized_data_file_name), ngram)
+            valid_words_in_one = POSinCorpus(os.path.join(work_path, lang, tagged_data_file_name), ngram)
             with open(pos_pickle_path, 'wb') as f:
                 pickle.dump(valid_words_in_one, f)
         for k, v in valid_words_in_one.items():
@@ -138,7 +139,7 @@ def PosFindTokensAllLanguages(languages, ngram, work_path, tokenized_data_file_n
     temp = [x[0] for x in ret_valid_POS][:n_most_freq]
     return set(temp)
 
-def FuncPronounsFindTokensAllLanguages(words_file_path, languages, pickle_name, work_path, tokenized_data_file_name):
+def FuncPronounsFindTokensAllLanguages(words_file_path, languages, pickle_name, work_path, tagged_data_file_name):
     ret_valid_words_in_corpus = set()
     file_words = readWordsFromFile(words_file_path)
     for lang in languages:
@@ -149,7 +150,7 @@ def FuncPronounsFindTokensAllLanguages(words_file_path, languages, pickle_name, 
                 ret_valid_words_in_corpus = ret_valid_words_in_corpus | pickle.load(f)
         else:
             print(retCurrentTime() + " *** calling wordsInCorpus and saving to pickle " + str(pickle_path))
-            words_in_one_corpus = wordsInCorpus(os.path.join(work_path, lang, tokenized_data_file_name), file_words)
+            words_in_one_corpus = wordsInCorpus(os.path.join(work_path, lang, tagged_data_file_name), file_words)
             with open(pickle_path,'wb') as f:
                 pickle.dump(words_in_one_corpus, f)
             ret_valid_words_in_corpus = ret_valid_words_in_corpus | words_in_one_corpus
@@ -185,14 +186,14 @@ def createCombinedLanguagesOrgTransCorpora(org_out_path, trans_out_path, working
                                            tagged_file_name_each_language,
                                            labeled_file_suffix_each_language, original_lang):
     print(retCurrentTime() + " Starting createCombinedLanguagesOrgTransCorpora")
-    org_combined = open(org_out_path, 'w+', encoding='cp1252')
-    trans_combined = open(trans_out_path, 'w+', encoding='cp1252')
+    org_combined = open(org_out_path, 'w+', encoding=en_tagged_encoding)
+    trans_combined = open(trans_out_path, 'w+', encoding=en_tagged_encoding)
     data_files = []
     labels_files = []
     done_list_data_files = []
     done_list_labels_files = []
     for lang in languages:
-        df = open(os.path.join(working_dir, lang, tagged_file_name_each_language), 'r', encoding='cp1252')
+        df = open(os.path.join(working_dir, lang, tagged_file_name_each_language), 'r', encoding=en_tagged_encoding)
         lf = open(os.path.join(working_dir, lang, lang + labeled_file_suffix_each_language), 'r', encoding='utf-8')
         data_files.append(df)
         labels_files.append(lf)
@@ -236,7 +237,7 @@ def getLineFeatures(line, search_enum, ngrams):
 
 
 def getDataPoints(file_path, corpusNouns, search_enum, TriOrBi, size_of_chunk):
-    with open(file_path, 'r', encoding='cp1252') as file:
+    with open(file_path, 'r', encoding=en_tagged_encoding) as file:
         if search_enum == SearchWordsOrPOS.FIND_POS_AND_WORDS:
             chunks = []
             chunk_pos = list()
@@ -331,24 +332,33 @@ def  createParser():
                         required=True)
     parser.add_argument('--chunk_size', help="defines the chunk size", required=True)
     parser.add_argument('--languages', help="languages to apply this scrip on separated by a blank space", required=True)
+    parser.add_argument('--encoding', help="this argument specify the encoding of en_tagged_tweetTokenizer.txt file created ",
+                        choices=['cp1252','utf-8'], required=True)
+
     return parser
+
+
+def setTaggedFileEncoding(input_enc):
+    global en_tagged_encoding
+    en_tagged_encoding = input_enc
 
 if __name__ == '__main__':
     print( "***Starting Time*** "  + retCurrentTime())
     args = createParser().parse_args()
+    setTaggedFileEncoding(args.encoding)
     if args.features == "Pronouns" or args.features == "FunctionWords":
         if args.features == "Pronouns":
             valid_words_in_corpus = FuncPronounsFindTokensAllLanguages(words_file_path=args.pronouns_path,
                                                                        languages=args.languages.split(" "),
                                                                        pickle_name='pronouns_words.p',
                                                                        work_path=args.working_dir,
-                                                                       tokenized_data_file_name='en_tagged_tweetTokenizer.txt')
+                                                                       tagged_data_file_name='en_tagged_tweetTokenizer.txt')
         else: # args.features equals "FunctionWords"
             valid_words_in_corpus = FuncPronounsFindTokensAllLanguages(words_file_path=args.funcwords_path,
                                                                        languages=args.languages.split(" "),
                                                                        pickle_name='function_words.p',
                                                                        work_path=args.working_dir,
-                                                                       tokenized_data_file_name='en_tagged_tweetTokenizer.txt')
+                                                                       tagged_data_file_name='en_tagged_tweetTokenizer.txt')
         if args.mode == "SLC":
             CreateSeparatedLanguageFeatureVectors(work_path=args.working_dir, languages=args.languages.split(" "),
                                                   output_original_data_name='dataOriginal_{0}_{1}chunksize.p'
@@ -379,7 +389,7 @@ if __name__ == '__main__':
     elif args.features == "POSTrigrams" or args.features == "POSBigrams":
         chosenNgram = POSNgram.TRIGRAM if (args.features == "POSTrigrams") else POSNgram.BIGRAM
         valid_POS = PosFindTokensAllLanguages(languages=args.languages.split(' '), ngram=chosenNgram.value,
-                                              work_path=args.working_dir, tokenized_data_file_name='en_tagged_tweetTokenizer.txt',
+                                              work_path=args.working_dir, tagged_data_file_name='en_tagged_tweetTokenizer.txt',
                                               n_most_freq=int(args.pos_top_n))
         if args.mode == "SLC":
             CreateSeparatedLanguageFeatureVectors(work_path=args.working_dir, languages=args.languages.split(" "),
@@ -414,10 +424,10 @@ if __name__ == '__main__':
                                                                    languages=args.languages.split(" "),
                                                                    pickle_name='function_words.p',
                                                                    work_path=args.working_dir,
-                                                                   tokenized_data_file_name='en_tagged_tweetTokenizer.txt')
+                                                                   tagged_data_file_name='en_tagged_tweetTokenizer.txt')
         valid_POS = PosFindTokensAllLanguages(languages=args.languages.split(' '), ngram=n_gram_var,
                                               work_path=args.working_dir,
-                                              tokenized_data_file_name='en_tagged_tweetTokenizer.txt',
+                                              tagged_data_file_name='en_tagged_tweetTokenizer.txt',
                                               n_most_freq=int(args.pos_top_n))
         if args.mode == "SLC":
             print("POS Bi/Tri-grams with Separated Language chunks was not implemented !")
