@@ -6,10 +6,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import KFold
 from multiprocessing import Process, Queue, current_process
 import datetime
-import sys
 import os
-sys.path.append('D:\ohadm\Downloads\libsvm-3.22\python')
-import svmutil
+import sys
+#sys.path.append('D:\ohadm\Downloads\libsvm-3.22\python')
+#import svmutil
 from make_features import retCurrentTime
 
 
@@ -72,13 +72,18 @@ def CreateBalancedData(fileName, num_samples_per_lang, num_features, langs_list,
     data = np.empty((num_samples_per_lang * len(langs_list), num_features))
     labels = np.empty(num_samples_per_lang * len(langs_list))
     for i in range(len(langs_list)):
-        with open(os.path.join(work_dir, langs_list[i], fileName),'rb') as lang_file:
-            one_lang_data = pickle.load(lang_file)
-            print("!!! In path " + lang_file.name + ", choosing randomly " + str(num_samples_per_lang) + " out of " + str(len(one_lang_data)))
-            randomIncs = returnShuffledIdx(one_lang_data.shape[0])
-            randomIncs = randomIncs[0:num_samples_per_lang]
-            data[i * num_samples_per_lang : (i + 1) * num_samples_per_lang] = one_lang_data[randomIncs, :]
-            labels[i * num_samples_per_lang: (i + 1) * num_samples_per_lang] = np.full(num_samples_per_lang,zero_one_label)
+        try:
+            with open(os.path.join(work_dir, langs_list[i], fileName),'rb') as lang_file:
+                one_lang_data = pickle.load(lang_file)
+                print("!!! In path " + lang_file.name + ", choosing randomly " + str(num_samples_per_lang) + " out of " + str(len(one_lang_data)) + " samples")
+                randomIncs = returnShuffledIdx(one_lang_data.shape[0])
+                randomIncs = randomIncs[0:num_samples_per_lang]
+                data[i * num_samples_per_lang : (i + 1) * num_samples_per_lang] = one_lang_data[randomIncs, :]
+                labels[i * num_samples_per_lang: (i + 1) * num_samples_per_lang] = np.full(num_samples_per_lang,zero_one_label)
+        except FileNotFoundError:
+            print("Error: In bilingual corpus dir {0} there is no artifact from the feature extraction \n"
+                  "script in expected location {1}".format(lang,os.path.join(work_dir, langs_list[i], fileName)))
+            sys.exit(1)
     return data, labels
 
 
@@ -133,11 +138,15 @@ if __name__ == '__main__':
         sample_per_lang = float('inf')
         features_num = None
         for lang in args.languages.split(" "):
-            with open(os.path.join(args.working_dir, lang, args.translated_samples_file_name), 'rb') as transFile:
-                one_lang_translated_data = np.array(pickle.load(transFile))
-                sample_per_lang = one_lang_translated_data.shape[0] if (one_lang_translated_data.shape[0] < sample_per_lang) else sample_per_lang
-                features_num = one_lang_translated_data.shape[1]
-
+            try:
+                with open(os.path.join(args.working_dir, lang, args.translated_samples_file_name), 'rb') as transFile:
+                    one_lang_translated_data = np.array(pickle.load(transFile))
+                    sample_per_lang = one_lang_translated_data.shape[0] if (one_lang_translated_data.shape[0] < sample_per_lang) else sample_per_lang
+                    features_num = one_lang_translated_data.shape[1]
+            except FileNotFoundError:
+                print("Error: In bilingual corpus dir {0} there is no artifact from the feature extraction \n"
+                      "script in expected location {1}".format(lang,os.path.join(args.working_dir, lang, args.translated_samples_file_name)))
+                sys.exit(1)
         # Creating balanced dataset
         data, label = get_data_and_labels(args.original_samples_file_name, args.translated_samples_file_name,
                                           sample_per_lang, features_num, args.languages.split(" "), args.working_dir)
