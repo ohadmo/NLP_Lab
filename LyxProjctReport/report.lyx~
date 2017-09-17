@@ -109,8 +109,8 @@ This work aims to distinguish between original texts and translated texts.
  language.
  We call this dialect translationese.
  Linguistic researches have proposed several universal properties of translation
-ese which we use in conjunction with machine learning techniques to distinguish
- between translated texts and non-translated (original) texts.
+ese which we use in conjunction with supervissed machine learning techniques
+ to distinguish between translated texts and non-translated (original) texts.
  Previous work 
 \begin_inset CommandInset citation
 LatexCommand cite
@@ -122,7 +122,14 @@ key "volansky2013features"
  can be utilized to successfully classify original and translated texts
  by performing an extensive exploration of that ability of different feature
  sets .
- Our work reproduce the results achieved by 
+ Another work 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "rabinovich2016unsupervised"
+
+\end_inset
+
+, .Our work reproduce the results achieved by 
 \begin_inset CommandInset citation
 LatexCommand cite
 key "volansky2013features"
@@ -733,6 +740,10 @@ POS trigrams
 
 \begin_layout Itemize
 POS bigrams
+\end_layout
+
+\begin_layout Itemize
+POS trigrams and function words
 \end_layout
 
 \begin_layout Standard
@@ -1395,6 +1406,114 @@ Number of samples
 
 \begin_layout Plain Layout
 Number of samples per chunk size
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+Finally, we experimented with combining the features, we transofred each
+ chunk to a vector by using function words and POS trigrams.
+ We conducted several experiments, each with different number of POS.
+ In all of the experiments we used randomly distributed chunks with 2000
+ tokens.
+ The results are shown at 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:tri+func"
+
+\end_inset
+
+ 
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename tri+func.jpg
+
+\end_inset
+
+
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Using trigrams and function words
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename bi+func.jpg
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Using bigrams and function words
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:tri+func"
+
+\end_inset
+
+Success rate of classification using function words and POS for varying
+ amount of top POS to use for classification
 \end_layout
 
 \end_inset
