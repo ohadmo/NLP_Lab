@@ -95,6 +95,14 @@ Distinguishing Between Original and Translated Texts
 Elad Tolochinsky, Ohad Mosafi
 \end_layout
 
+\begin_layout Abstract
+This work distingiush between translated and original text in the UN protocol
+ corpus.
+ We do so by modeling the problem as classification problem.
+ We compare various methods for extracting feature from text and we are
+ able to achieve up to 95% classification accuracy.
+\end_layout
+
 \begin_layout Section
 Introduction
 \end_layout
@@ -1152,6 +1160,7 @@ reference "fig:Comparing-classification-results"
 
 \begin_layout Standard
 \begin_inset Float figure
+placement H
 wide false
 sideways false
 status open
@@ -1203,6 +1212,7 @@ reference "fig:Classification-results-for"
 
 \begin_layout Standard
 \begin_inset Float figure
+placement H
 wide false
 sideways false
 status open
@@ -1243,6 +1253,7 @@ Classification results for various amounts of tokens in a chunk.
 
 \begin_layout Standard
 \begin_inset Float table
+placement H
 wide false
 sideways false
 status open
@@ -1432,6 +1443,7 @@ reference "fig:tri+func"
 
 \begin_layout Standard
 \begin_inset Float figure
+placement H
 wide false
 sideways false
 status open
@@ -1447,7 +1459,7 @@ status open
 \align center
 \begin_inset Graphics
 	filename tri+func.jpg
-	scale 80
+	scale 70
 
 \end_inset
 
@@ -1483,7 +1495,7 @@ status open
 \align center
 \begin_inset Graphics
 	filename bi+func.jpg
-	scale 80
+	scale 70
 
 \end_inset
 

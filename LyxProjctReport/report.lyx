@@ -95,6 +95,18 @@ Distinguishing Between Original and Translated Texts
 Elad Tolochinsky, Ohad Mosafi
 \end_layout
 
+\begin_layout Abstract
+This work distinguishes between translated and original text in the UN protocol
+ corpus.
+ By modeling the problem as classification problem we are able to achieve
+ up to 95% classification accuracy.
+ We begin by deriving a parallel corpora for different languages and then
+ classify the data by using various feature extraction methods.
+ We compare the different methods as well as the ability to distinguish
+ between translated and original texts in the different languages.
+ 
+\end_layout
+
 \begin_layout Section
 Introduction
 \end_layout
@@ -1152,6 +1164,7 @@ reference "fig:Comparing-classification-results"
 
 \begin_layout Standard
 \begin_inset Float figure
+placement H
 wide false
 sideways false
 status open
@@ -1203,6 +1216,7 @@ reference "fig:Classification-results-for"
 
 \begin_layout Standard
 \begin_inset Float figure
+placement H
 wide false
 sideways false
 status open
@@ -1243,6 +1257,7 @@ Classification results for various amounts of tokens in a chunk.
 
 \begin_layout Standard
 \begin_inset Float table
+placement H
 wide false
 sideways false
 status open
@@ -1432,9 +1447,10 @@ reference "fig:tri+func"
 
 \begin_layout Standard
 \begin_inset Float figure
+placement H
 wide false
 sideways false
-status collapsed
+status open
 
 \begin_layout Plain Layout
 \align center
@@ -1447,6 +1463,7 @@ status open
 \align center
 \begin_inset Graphics
 	filename tri+func.jpg
+	scale 70
 
 \end_inset
 
@@ -1469,6 +1486,10 @@ Using trigrams and function words
 \end_inset
 
 
+\begin_inset Newline linebreak
+\end_inset
+
+
 \begin_inset Float figure
 wide false
 sideways false
@@ -1478,6 +1499,7 @@ status open
 \align center
 \begin_inset Graphics
 	filename bi+func.jpg
+	scale 70
 
 \end_inset
 
