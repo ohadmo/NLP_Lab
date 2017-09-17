@@ -10,6 +10,7 @@ import sys
 import os
 sys.path.append('D:\ohadm\Downloads\libsvm-3.22\python')
 import svmutil
+from make_features import retCurrentTime
 
 
 def NormalizeData(data):
@@ -17,12 +18,26 @@ def NormalizeData(data):
     data[:] = preprocessing.scale(data)
     data[:] = preprocessing.normalize(data)
 
-def RunOneFold(dataTrain, dataTest, labelsTrain, labelsTest, queue):
+def getDesiredClassifier(classifier_name):
+    def getSVM():
+        print("SVM classifier is chosen!")
+        return svm.SVC(kernel='linear')
+    def getLogisticRegression():
+        print("Logistic Regression classifier is chosen!")
+        return linear_model.LogisticRegression(C=2)
+    def getRandomForest():
+        print("Random Forest classifier is chosen!")
+        return RandomForestClassifier(max_depth=200, random_state=0)
+    return {
+        'linear_svm' :          getSVM,
+        'logistic_regression':  getLogisticRegression,
+        'random_forest':        getRandomForest
+    }[classifier_name]()
+
+def RunOneFold(dataTrain, dataTest, labelsTrain, labelsTest, queue, classifier_obj):
     print(current_process().name + " alive!")
     print("starting train " + current_process().name)
-    clf = svm.SVC(kernel='linear').fit(dataTrain, labelsTrain)
-    #clf =  linear_model.LogisticRegression(C=2).fit(dataTrain, labelsTrain)
-    #clf =  RandomForestClassifier(max_depth=200, random_state=0).fit(dataTrain, labelsTrain)
+    clf = classifier_obj.fit(dataTrain, labelsTrain)
     print("training done " + current_process().name)
     predicted = clf.predict(dataTest)
     predicted = np.array(predicted)
@@ -35,14 +50,14 @@ def RunOneFold(dataTrain, dataTest, labelsTrain, labelsTest, queue):
     confMat = np.zeros((2,2),dtype=np.int)
     for i in range(len(labelsTest)):
         confMat[int(labelsTest[i]), int(predicted[i])] += 1
-    print("*****conf mat*****")
+    print("*****{0} - Conffusion Matrix*****".format(current_process().name))
     c = np.concatenate(( [["Trns", "Org"]], confMat), axis=0)
     c = np.concatenate(( np.array([["^^^^", "Trns", "Org"]]).T, c),axis=1)
     c = np.concatenate(( [["^^^^", "Pred", "^^^^"]], c), axis=0)
     c = np.concatenate(( np.array([["^^^^", "^^^^", "Actu","^^^^"]]).T, c),axis=1)
     print(c)
     print("******************")
-    print("printing one process dist: " + current_process().name)
+    print(current_process().name + "printing  process distribution")
     print(current_process().name + "----predicted as original: " + str(np.sum(np.array(predicted) == 1)) + " predicted as translated:" + str(np.sum(np.array(predicted) == 0)))
     print(current_process().name + "----labeled as original: " + str(np.sum(np.array(labelsTest) == 1)) + " labeled as translated:" + str(np.sum(np.array(labelsTest) == 0)))
     print(current_process().name + " process score: " + str(score))
@@ -84,8 +99,7 @@ def get_data_and_label_from_p(file_name, dir, label):
         labels =  np.full(len(samples), label)
         return samples, labels
 
-
-if __name__ == '__main__':
+def createParser():
     parser = argparse.ArgumentParser(description='This script is responsible for running a classifier using 10fold'
                                                  ' cross validations. ')
     parser.add_argument('mode', help='Two options are available:(according to the running mode of make_features.py) '
@@ -93,6 +107,8 @@ if __name__ == '__main__':
                                      'of different languages. '
                                      'SeparatedLanguageChunks(SLC) chunks are built for each language separately.',
                         choices=['CLC', 'SLC'])
+    parser.add_argument('classifier', help="Desired classifier to be chosen",
+                        choices=['linear_svm', 'logistic_regression', 'random_forest'])
     parser.add_argument('--working_dir', help='Specify the working dir path', required=True)
     parser.add_argument('--translated_samples_file_name',
                         help='In CombinedLanguageChunks mode: specify The name of the translated samples file '
@@ -104,10 +120,14 @@ if __name__ == '__main__':
                              'which is located in each of the language dirs under working dir path '
                              'In SeparatedLanguageChunks mode: specify the name of the combined original file '
                              'which should be located under working dir', required=True)
-    parser.add_argument('--languages', help="languages to apply this scrip on separated by a blank space", required=True)
-    args = parser.parse_args()
+    parser.add_argument('--languages', help="languages to apply this script on separated by a blank space",
+                        required=False)
+    return parser
 
+if __name__ == '__main__':
+    args = createParser().parse_args()
     if args.mode == "SLC":
+        print(retCurrentTime() + " Start Loading data Separated languages Corpora")
         # Loading translated data samples from each language folder, the num of samples taken from each folder is determined
         # by the language with the least amount of translated samples in it
         sample_per_lang = float('inf')
@@ -122,14 +142,17 @@ if __name__ == '__main__':
         data, label = get_data_and_labels(args.original_samples_file_name, args.translated_samples_file_name,
                                           sample_per_lang, features_num, args.languages.split(" "), args.working_dir)
     else: #args.mode equals "CLC"
+        print(retCurrentTime() + " Start Loading data Combined languages Corpora")
         translated_data, translated_labels = \
             get_data_and_label_from_p(args.translated_samples_file_name, args.working_dir, 0)
         original_data, original_labels = \
             get_data_and_label_from_p(args.original_samples_file_name, args.working_dir, 1)
+        print("after loading combined dataset: translated samples={0} and original samples={1}".format(len(translated_labels),len(original_labels))  )
 
         sidx = returnShuffledIdx(len(translated_labels))
         original_data=original_data[sidx,:]
         original_labels = original_labels[sidx]
+        print("in combined original samples were picked randomly and now original samples={0}".format(len(original_labels)))
 
         data = np.concatenate((translated_data, original_data))
         label = np.concatenate((translated_labels, original_labels))
@@ -139,7 +162,7 @@ if __name__ == '__main__':
     data = data[shuffled_idx,:]
     label = label[shuffled_idx]
 
-    #Normalzing Data
+    # Standardizing & Normalizing Data
     NormalizeData(data)
 
     print("*** About to start Multiclass classification *** " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
@@ -151,25 +174,23 @@ if __name__ == '__main__':
     kf = KFold(n_splits=folds, shuffle=True)
     q = Queue()
     processes = []
+    chosen_classifier = getDesiredClassifier(args.classifier)
     for train_index, test_index in kf.split(data):
         X_train = [data[i] for i in train_index]
         X_test = [data[i] for i in test_index]
         y_train = [label[i] for i in train_index]
         y_test = np.array([label[i] for i in test_index])
-        p = Process(target=RunOneFold, args=(X_train, X_test, y_train, y_test, q,))
+        p = Process(target=RunOneFold, args=(X_train, X_test, y_train, y_test, q, chosen_classifier))
         p.start()
         processes.append(p)
-    for p in processes:
-        p.join()
-    countFolds = 0
+    for process in processes:
+        process.join()
     calcL = []
     while (not q.empty()):
         tempVal = q.get()  * 100
-        countFolds += tempVal
         calcL.append(tempVal)
-    print ("***total success rate is:************************" + str(countFolds/folds))
-    print("***total success rate2 is:************************" + str(np.mean(calcL)))
-    print("***std is :*** " + str(np.std(calcL)))
+    print("***Average success rate is:************************" + str(np.mean(calcL)))
+    print("***STD is :*** " + str(np.std(calcL)))
     print(calcL)
     print("***Finish Time*** " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
 
