@@ -114,10 +114,10 @@ Introduction
 \begin_layout Standard
 This work aims to distinguish between original texts and translated texts.
  Given a document written in some language, we wish to accurately say whether
- the document was originally written in that language or if it was translated
+ the document was originally written in that language or it was translated
  to it.
  To distinguish such texts we use a linguistic concept called translationese.
- Translated texts, in any language, can be considered a dialect oft his
+ Translated texts, in any language, can be considered a dialect of this
  language.
  We call this dialect translationese.
  Linguistic researches have proposed several universal properties of translation
@@ -141,7 +141,13 @@ key "rabinovich2016unsupervised"
 
 \end_inset
 
-, .Our work reproduce the results achieved by 
+, presents a high In-domain classification accuracy using these feature
+ sets on Europal and three additional sub-corpota - Hansard, Literatue and
+ TED.
+ However, the cross-domain classification accuracy on Europal, Hansard and
+ Literatue corpora, when training on one corpus and testing on another yields
+ a sucess rate score which slightly outperfom chance lavel .Our work reproduce
+ the results achieved by 
 \begin_inset CommandInset citation
 LatexCommand cite
 key "volansky2013features"
@@ -242,15 +248,15 @@ add_1.lnk
 \emph default
 .
  To derive a bilingual parallel corpus, we pick a language and traverse
- it's directory along side the the English directory (Note that we must
- start the derivation from the non-English language, due to he fact that
- the link file matches non English sentences to their English translation
- but not the opposite).
+ it's directory along side  the English directory (Note that we must start
+ the derivation from the non-English language, due to he fact that the link
+ file matches non English sentences to their English translation but not
+ the opposite).
  For each sentence, we use the link file to determine if the sentence is
  in original or translated.
  The outputs of the process are 3 files for each language: a file containing
  English sentences, a file in which each line is the translation of the
- appropriate line in the English file and a third file which specifies the
+ parallel line in the English file and a third file which specifies the
  original language of each line.
  While processing the documents, many documents were filtered out of the
  corpus due to various reasons, such as: documents that had no corresponding
@@ -260,14 +266,14 @@ add_1.lnk
  After obtaining the valid documents we filtered out invalid sentences which
  include sentences which language tag was different then the language tag
  of the file and sentences which has no destination at the link file.
- Results of the derivation are summarized at 
+ Results of the derivation are summarized at Table 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "tab:Corpora-derivation-results"
 
 \end_inset
 
-
+.
 \end_layout
 
 \begin_layout Standard
@@ -801,7 +807,7 @@ Experiments and Results
 
 \begin_layout Standard
 After obtaining the bilingual parallel corpora we divided the sentences
- at the English file of the corpus to tokens and add POS tags.
+ at the English file of the corpus to tokens and added POS tags.
  The tokenizer we used is NLTK's tweet tokenizer and POS tagging was done
  with OpenNLP.
  After obtaining tokenized and tagged documents we start dividing each document
@@ -819,9 +825,11 @@ After obtaining the bilingual parallel corpora we divided the sentences
  We merge all of this vectors and feed them to a classifier.
  Afterwards we classify each language separately to see in which languages
  the distinction from original to speech is easier.
- Finally we reproduced the chunks, only this time we shuffled all of the
- sentences from all of the languages together and then divided them to chunks.
- The results are depicted at 
+ Finally we reproduced the chunks, only this time we shuffled together translate
+d English sentences from all of the languages and sentences originally in
+ English were shuffled together from different bilingual corpora as well.
+ Then divided them to chunks.
+ The results are depicted at Table 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "tab:Classification-Results"
@@ -844,13 +852,23 @@ status open
 \begin_layout Plain Layout
 \align center
 \begin_inset Tabular
-<lyxtabular version="3" rows="7" columns="4">
+<lyxtabular version="3" rows="7" columns="5">
 <features tabularvalignment="middle">
+<column alignment="left" valignment="middle" width="5cm">
 <column alignment="center" valignment="top" width="5cm">
 <column alignment="center" valignment="top">
 <column alignment="center" valignment="top">
 <column alignment="center" valignment="top">
 <row>
+<cell alignment="left" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
 <cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
 \begin_inset Text
 
@@ -889,15 +907,25 @@ Bigrams
 </cell>
 </row>
 <row>
+<cell multirow="3" alignment="left" valignment="middle" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Each chunk contains lines which belong to one language out of French, Spanish,
+ Russian and Arabic
+\end_layout
+
+\end_inset
+</cell>
 <cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
-Classifying all languages
+All languages(excluding chinese)
 \begin_inset Newline linebreak
 \end_inset
 
-Each chunk belong to one language
+
 \end_layout
 
 \end_inset
@@ -931,6 +959,15 @@ Each chunk belong to one language
 </cell>
 </row>
 <row>
+<cell multirow="4" alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
 <cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
 \begin_inset Text
 
@@ -969,6 +1006,15 @@ French-English
 </cell>
 </row>
 <row>
+<cell multirow="4" alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
 <cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
 \begin_inset Text
 
@@ -1007,6 +1053,15 @@ Spanish-English
 </cell>
 </row>
 <row>
+<cell multirow="4" alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
 <cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
 \begin_inset Text
 
@@ -1045,6 +1100,15 @@ Russian-English
 </cell>
 </row>
 <row>
+<cell multirow="4" alignment="left" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
 <cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
 \begin_inset Text
 
@@ -1083,6 +1147,15 @@ Arabic-English
 </cell>
 </row>
 <row>
+<cell alignment="left" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Lines in chunks are randomly distributed across languages
+\end_layout
+
+\end_inset
+</cell>
 <cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
 \begin_inset Text
 
@@ -1091,7 +1164,7 @@ All languages
 \begin_inset Newline linebreak
 \end_inset
 
-chunks randomly distributed across languages
+
 \end_layout
 
 \end_inset
@@ -1151,7 +1224,7 @@ Classification Results
 
 \end_inset
 
-The comparison between the classification results is depicted at 
+The comparison between the classification results is depicted at  
 \begin_inset CommandInset ref
 LatexCommand formatted
 reference "fig:Comparing-classification-results"
@@ -1189,7 +1262,8 @@ name "fig:Comparing-classification-results"
 
 \end_inset
 
-Comparing classification results between languages
+Comparing classification results between languages (the average of the three
+ feature extraction options).
 \end_layout
 
 \end_inset
@@ -1199,11 +1273,12 @@ Comparing classification results between languages
 
 \end_inset
 
-We also tested the effects of changing the amount of tokens in a chunk.
+We also tested the effects of changing the amount of tokens in a chunk,
+ where lines in chunks are randomly distributed from different languages.
  We produced various datasets from different sized chunks.
  Each dataset was balanced by taking all of the translated chunks and randomly
  choosing the same number of original chunks before classification.
- The results are depicted at
+ The results are depicted at Figure 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "fig:Classification-results-for"
@@ -1430,12 +1505,12 @@ Number of samples per chunk size
 
 \end_inset
 
-Finally, we experimented with combining the features, we transofred each
+Finally, we experimented with combining the features, we transferred each
  chunk to a vector by using function words and POS trigrams.
  We conducted several experiments, each with different number of POS.
  In all of the experiments we used randomly distributed chunks with 2000
  tokens.
- The results are shown at 
+ The results are shown at Figure 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "fig:tri+func"

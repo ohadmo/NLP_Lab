@@ -60,7 +60,7 @@ def POSinCorpus(path, ngrams):
                 pos_line = [x.strip().rsplit('_',1) if len(x.strip().rsplit('_',1)) == 2 else x.strip().split('?') for x in line.split(' ')]
                 pos_line = [x[SearchWordsOrPOS.FIND_POS.value] for x in pos_line]
             except:
-                print("Exception POSinCorpus: " , line)
+                print("Exception in POSinCorpus(ignore \"Execution time\" lines, it appends to the end of file by opennlp): " , line)
             else:
                 if len(pos_line) < ngrams:
                     continue
@@ -93,7 +93,7 @@ def divide_to_chnuks(language_file, label_file, lang, corpusNouns, search_enum, 
                 tokens = [x.strip().lower().rsplit('_',1) if len(x.strip().rsplit('_',1)) == 2 else x.strip().split('?') for x in line.split(' ')]
                 tokens = [x[search_enum.value] for x in tokens]
             except:
-                print("exception divide_to_chunks in line:" , line)
+                print("Exception in divide_to_chunks(ignore \"Execution time\" lines, it appends to the end of file by opennlp): " , line)
             else:
                 if search_enum == SearchWordsOrPOS.FIND_POS:
                     t = []
@@ -216,7 +216,7 @@ def createCombinedLanguagesOrgTransCorpora(org_out_path, trans_out_path, working
     for cf, cl in zip(done_list_data_files, done_list_labels_files):
         cf.close()
         cl.close()
-    print(retCurrentTime() + " Finished createCombinedLanguagesOrgTransCorpora")
+    print(retCurrentTime() + " Finished createCombinedLanguagesOrgTransCorpora in path: {0}   {1}".format(org_out_path,trans_out_path))
 
 
 def getLineFeatures(line, search_enum, ngrams):
@@ -225,7 +225,8 @@ def getLineFeatures(line, search_enum, ngrams):
         tokens = [x.strip().lower().rsplit('_', 1) if len(x.strip().rsplit('_', 1)) == 2 else x.strip().split('?') for x in line.split(' ')]
         tokens = [x[search_enum.value] for x in tokens]
     except:
-        print("exception getLineFeatures:", line)
+        print("Exception in getLineFeatures(ignore \"Execution time\" lines, it appends to the end of file by opennlp):", line)
+        return []
     else:
         if search_enum == SearchWordsOrPOS.FIND_POS:
             line_trigram = []
@@ -334,7 +335,6 @@ def  createParser():
     parser.add_argument('--languages', help="languages to apply this scrip on separated by a blank space", required=True)
     parser.add_argument('--encoding', help="this argument specify the encoding of en_tagged_tweetTokenizer.txt file created ",
                         choices=['cp1252','utf-8'], required=True)
-
     return parser
 
 
