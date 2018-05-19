@@ -167,7 +167,7 @@ Derivation of the Corpora
 
 \begin_layout Standard
 The base of this work is the UN parallel corpus which is described at length
- at 
+ in 
 \begin_inset CommandInset citation
 LatexCommand cite
 key "ziemski2016united"
@@ -266,7 +266,7 @@ add_1.lnk
  After obtaining the valid documents we filtered out invalid sentences which
  include sentences which language tag was different then the language tag
  of the file and sentences which has no destination at the link file.
- Results of the derivation are summarized at Table 
+ Results of the derivation are summarized in Table 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "tab:Corpora-derivation-results"
@@ -735,7 +735,7 @@ In the previous section we described a method in which we can distinguish
  a numeric representation of documents.
  As this properties represent the dialect of translated properties, we intuitive
 ly expect that will produce accurate classification results.
- The work at 
+ The work in 
 \begin_inset CommandInset citation
 LatexCommand cite
 key "volansky2013features"
@@ -829,7 +829,7 @@ After obtaining the bilingual parallel corpora we divided the sentences
 d English sentences from all of the languages and sentences originally in
  English were shuffled together from different bilingual corpora as well.
  Then divided them to chunks.
- The results are depicted at Table 
+ The results are depicted in Table 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "tab:Classification-Results"
@@ -1224,7 +1224,7 @@ Classification Results
 
 \end_inset
 
-The comparison between the classification results is depicted at  
+The comparison between the classification results is depicted in  
 \begin_inset CommandInset ref
 LatexCommand formatted
 reference "fig:Comparing-classification-results"
@@ -1278,7 +1278,7 @@ We also tested the effects of changing the amount of tokens in a chunk,
  We produced various datasets from different sized chunks.
  Each dataset was balanced by taking all of the translated chunks and randomly
  choosing the same number of original chunks before classification.
- The results are depicted at Figure 
+ The results are depicted in Figure 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "fig:Classification-results-for"
@@ -1509,8 +1509,8 @@ Finally, we experimented with combining the features, we transferred each
  chunk to a vector by using function words and POS trigrams.
  We conducted several experiments, each with different number of POS.
  In all of the experiments we used randomly distributed chunks with 2000
- tokens.
- The results are shown at Figure 
+ tokens taken from all the bilingual corpora.
+ The results are shown in Figure 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "fig:tri+func"

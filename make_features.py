@@ -280,12 +280,13 @@ def createSamplesPickleFromCombnidCorpora(org_combined_path, trans_combined_path
               .format(output_org_pickle_name,output_trans_pickle_name))
     else:
         original_data = getDataPoints(org_combined_path, corpusNouns, SearchWordOrPos, ngrams, size_of_chunk)
-        translated_data = getDataPoints(trans_combined_path, corpusNouns, SearchWordOrPos, ngrams, size_of_chunk)
-        pickle.dump(original_data, open(os.path.join(working_dir, output_org_pickle_name), 'wb'))
-        pickle.dump(translated_data, open(os.path.join(working_dir, output_trans_pickle_name), 'wb'))
         print("created the pickle file{0}, to be executed by the classifier".format(os.path.join(working_dir, output_org_pickle_name)))
-        print("created the pickle file{0}, to be executed by the classifier".format(os.path.join(working_dir, output_trans_pickle_name)))
+        pickle.dump(original_data, open(os.path.join(working_dir, output_org_pickle_name), 'wb'))
         print("no. of sampels in original: " + str(len(original_data)))
+
+        translated_data = getDataPoints(trans_combined_path, corpusNouns, SearchWordOrPos, ngrams, size_of_chunk)
+        print("created the pickle file{0}, to be executed by the classifier".format(os.path.join(working_dir, output_trans_pickle_name)))
+        pickle.dump(translated_data, open(os.path.join(working_dir, output_trans_pickle_name), 'wb'))
         print("no. of sampels in translated: " + str(len(translated_data)))
 
     print("finished createSamplesPickleFromCombnidCorpora" + retCurrentTime())
